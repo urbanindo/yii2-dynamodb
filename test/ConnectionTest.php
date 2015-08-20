@@ -5,7 +5,10 @@ class ConnectionTest extends PHPUnit_Framework_TestCase {
     public function testConnectionClient() {
         $component = new \UrbanIndo\Yii2\DynamoDb\Connection([
             'config' => [
-                'profile' => 'default',
+                'credentials' => [
+                    'key' => 'AKIA1234567890',
+                    'secret' => '1234567890',
+                ],
                 'region' => 'ap-southeast-1',
                 'version' => 'latest',
                 'endpoint' => DYNAMODB_URL,
