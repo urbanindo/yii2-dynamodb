@@ -1,0 +1,26 @@
+{
+    "name": "urbanindo/yii2-dynamodb",
+    "description": "DynamoDB extensions for Yii2",
+    "license": "BSD License",
+    "authors": [
+        {
+            "name": "Petra Barus",
+            "email": "petra.barus@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {
+        "php": ">=5.4.0",
+        "yiisoft/yii2": "*",
+        "aws/aws-sdk-php": ">=2.4"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "4.6.*",
+        "phpunit/dbunit": ">=1.2"
+    },
+    "autoload": {
+        "psr-4": {
+            "UrbanIndo\\Yii2\\DynamoDb\\": "src/"
+        }
+    }
+}
