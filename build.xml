@@ -1,0 +1,32 @@
+<project name="yii2-dynamodb" default="test" basedir=".">
+    <property name="dynamodbpath" location="${basedir}/dynamodb/DynamoDBLocal.jar"/>
+    <target name="test">
+        <echo>Starting server</echo>
+        <exec executable="java" spawn="true">
+            <arg value="-jar"/>
+            <arg value="${dynamodbpath}"/>
+            <arg value="-inMemory"/>
+        </exec>
+        <sleep seconds="3"/>
+        <echo>Running phpunit</echo>
+        <exec executable="${basedir}/vendor/bin/phpunit" failonerror="true">
+
+        </exec>
+        <exec executable="jps">
+            <arg value="-l"/>
+            <redirector outputproperty="dynamodb.pid">
+                <outputfilterchain>
+                    <linecontains>
+                        <contains value="DynamoDBLocal.jar"/>
+                    </linecontains>
+                    <replaceregex pattern=" ${dynamodbpath}" replace="" />
+                </outputfilterchain>
+            </redirector>
+        </exec>
+        <echo>Cleaning up</echo>
+        <exec executable="kill">
+            <arg value="-9"/>
+            <arg value="${dynamodb.pid}"/>
+        </exec>
+    </target>
+</project>

@@ -5,8 +5,15 @@ php:
   - hhvm
   - nightly
 
+env:
+  global:
+    - AWS_ACCESS_KEY_ID=AKIA1234567890
+    - AWS_SECRET_ACCESS_KEY=AKIA1234567890
+
 install:
   - travis_retry composer self-update && composer --version
   - travis_retry composer install --prefer-source --no-interaction
   - wget http://dynamodb-local.s3-website-us-west-2.amazonaws.com/dynamodb_local_latest.zip --quiet -O temp.zip; unzip -qq temp.zip -d dynamodb; rm temp.zip
 
+script:
+  - ant

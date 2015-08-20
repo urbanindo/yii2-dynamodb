@@ -4,7 +4,7 @@
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "d95ba8ecd882e90d7a408db8cc9e0b11",
+    "hash": "792d2432abeb4d642945587015178803",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
@@ -12,12 +12,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/aws/aws-sdk-php.git",
-                "reference": "f4d91f0e6c59624047b433756ef3f06baa06b7a0"
+                "reference": "9c2a1816e3402806741f3a22a5b38efa945c0a8a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/f4d91f0e6c59624047b433756ef3f06baa06b7a0",
-                "reference": "f4d91f0e6c59624047b433756ef3f06baa06b7a0",
+                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/9c2a1816e3402806741f3a22a5b38efa945c0a8a",
+                "reference": "9c2a1816e3402806741f3a22a5b38efa945c0a8a",
                 "shasum": ""
             },
             "require": {
@@ -77,7 +77,7 @@
                 "s3",
                 "sdk"
             ],
-            "time": "2015-08-19 17:07:40"
+            "time": "2015-08-20 23:06:52"
         },
         {
             "name": "bower-asset/jquery",
@@ -350,12 +350,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/guzzle/guzzle.git",
-                "reference": "d687700d601f8b5f19b99ffc1c0f6af835a3c7b7"
+                "reference": "36e021d6f26185f0a39ed8de509bb6b8f0283d45"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/guzzle/guzzle/zipball/d687700d601f8b5f19b99ffc1c0f6af835a3c7b7",
-                "reference": "d687700d601f8b5f19b99ffc1c0f6af835a3c7b7",
+                "url": "https://api.github.com/repos/guzzle/guzzle/zipball/36e021d6f26185f0a39ed8de509bb6b8f0283d45",
+                "reference": "36e021d6f26185f0a39ed8de509bb6b8f0283d45",
                 "shasum": ""
             },
             "require": {
@@ -404,7 +404,7 @@
                 "rest",
                 "web service"
             ],
-            "time": "2015-08-15 20:48:15"
+            "time": "2015-08-24 17:09:43"
         },
         {
             "name": "guzzlehttp/promises",
@@ -625,12 +625,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/yiisoft/yii2-framework.git",
-                "reference": "baed9ab2ef1ef61c5ff50ab4dd504d24796d7c2e"
+                "reference": "76500e2fe71c2ff4a4ec2195e1f18cb605140866"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/yiisoft/yii2-framework/zipball/baed9ab2ef1ef61c5ff50ab4dd504d24796d7c2e",
-                "reference": "baed9ab2ef1ef61c5ff50ab4dd504d24796d7c2e",
+                "url": "https://api.github.com/repos/yiisoft/yii2-framework/zipball/76500e2fe71c2ff4a4ec2195e1f18cb605140866",
+                "reference": "76500e2fe71c2ff4a4ec2195e1f18cb605140866",
                 "shasum": ""
             },
             "require": {
@@ -705,7 +705,7 @@
                 "framework",
                 "yii2"
             ],
-            "time": "2015-08-18 08:52:48"
+            "time": "2015-08-21 14:14:00"
         },
         {
             "name": "yiisoft/yii2-composer",
@@ -809,6 +809,94 @@
                 "instantiate"
             ],
             "time": "2015-06-14 21:17:01"
+        },
+        {
+            "name": "flow/jsonpath",
+            "version": "dev-master",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/FlowCommunications/JSONPath.git",
+                "reference": "0b8d3719951ae710804feb01bb55bc7168e4e2f5"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/FlowCommunications/JSONPath/zipball/0b8d3719951ae710804feb01bb55bc7168e4e2f5",
+                "reference": "0b8d3719951ae710804feb01bb55bc7168e4e2f5",
+                "shasum": ""
+            },
+            "require-dev": {
+                "peekmo/jsonpath": "dev-master",
+                "phpunit/phpunit": "dev-master"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-0": {
+                    "Flow\\JSONPath": "src/",
+                    "Flow\\JSONPath\\Test": "tests/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Stephen Frank",
+                    "email": "stephen@flowsa.com"
+                }
+            ],
+            "description": "JSONPath implementation for parsing, searching and flattening arrays",
+            "time": "2015-06-25 12:42:18"
+        },
+        {
+            "name": "fzaninotto/faker",
+            "version": "dev-master",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/fzaninotto/Faker.git",
+                "reference": "f8fd1fca295b3ee5c5c3a0bae1ec21367ac2314c"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/fzaninotto/Faker/zipball/f8fd1fca295b3ee5c5c3a0bae1ec21367ac2314c",
+                "reference": "f8fd1fca295b3ee5c5c3a0bae1ec21367ac2314c",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.3.3"
+            },
+            "require-dev": {
+                "ext-intl": "*",
+                "phpunit/phpunit": "~4.0",
+                "squizlabs/php_codesniffer": "~1.5"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "1.6.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Faker\\": "src/Faker/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "François Zaninotto"
+                }
+            ],
+            "description": "Faker is a PHP library that generates fake data for you.",
+            "keywords": [
+                "data",
+                "faker",
+                "fixtures"
+            ],
+            "time": "2015-08-24 12:15:31"
         },
         {
             "name": "phpdocumentor/reflection-docblock",
@@ -1724,12 +1812,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/Yaml.git",
-                "reference": "d067e47c2be88b62c3e50d1362d959efc46ffefc"
+                "reference": "737b5ca48a451f5e4ed542aae7ed1ab6996bd7eb"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/Yaml/zipball/d067e47c2be88b62c3e50d1362d959efc46ffefc",
-                "reference": "d067e47c2be88b62c3e50d1362d959efc46ffefc",
+                "url": "https://api.github.com/repos/symfony/Yaml/zipball/737b5ca48a451f5e4ed542aae7ed1ab6996bd7eb",
+                "reference": "737b5ca48a451f5e4ed542aae7ed1ab6996bd7eb",
                 "shasum": ""
             },
             "require": {
@@ -1765,12 +1853,15 @@
             ],
             "description": "Symfony Yaml Component",
             "homepage": "https://symfony.com",
-            "time": "2015-08-01 06:48:35"
+            "time": "2015-08-24 07:21:16"
         }
     ],
     "aliases": [],
     "minimum-stability": "dev",
-    "stability-flags": [],
+    "stability-flags": {
+        "fzaninotto/faker": 20,
+        "flow/jsonpath": 20
+    },
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {
