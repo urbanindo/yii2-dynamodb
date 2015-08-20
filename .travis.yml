@@ -10,3 +10,7 @@ install:
   - travis_retry composer install --prefer-source --no-interaction
   - wget http://dynamodb-local.s3-website-us-west-2.amazonaws.com/dynamodb_local_latest.zip --quiet -O temp.zip; unzip -qq temp.zip -d dynamodb; rm temp.zip
 
+before_script:
+  - java -Djava.library.path=./dynamodb/DynamoDBLocal_lib -jar ./dynamodb/DynamoDBLocal.jar -inMemory & DYNAMODB_PID=$!
+after_script:
+  - kill $DYNAMODB_PID
