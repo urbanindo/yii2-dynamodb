@@ -1,4 +1,5 @@
 <project name="yii2-dynamodb" default="test" basedir=".">
+    <taskdef resource="net/sf/antcontrib/antcontrib.properties"/>
     <property name="dynamodbpath" location="${basedir}/dynamodb/DynamoDBLocal.jar"/>
     <target name="test">
         <echo>Starting server</echo>
@@ -9,24 +10,30 @@
         </exec>
         <sleep seconds="3"/>
         <echo>Running phpunit</echo>
-        <exec executable="${basedir}/vendor/bin/phpunit" failonerror="true">
+        <trycatch property="foo" reference="bar">
+            <try>
+                <exec executable="${basedir}/vendor/bin/phpunit" failonerror="true">
+                </exec>
+            </try>
 
-        </exec>
-        <exec executable="jps">
-            <arg value="-l"/>
-            <redirector outputproperty="dynamodb.pid">
-                <outputfilterchain>
-                    <linecontains>
-                        <contains value="DynamoDBLocal.jar"/>
-                    </linecontains>
-                    <replaceregex pattern=" ${dynamodbpath}" replace="" />
-                </outputfilterchain>
-            </redirector>
-        </exec>
-        <echo>Cleaning up</echo>
-        <exec executable="kill">
-            <arg value="-9"/>
-            <arg value="${dynamodb.pid}"/>
-        </exec>
+            <finally>
+                <exec executable="jps">
+                    <arg value="-l"/>
+                    <redirector outputproperty="dynamodb.pid">
+                        <outputfilterchain>
+                            <linecontains>
+                                <contains value="DynamoDBLocal.jar"/>
+                            </linecontains>
+                            <replaceregex pattern=" ${dynamodbpath}" replace="" />
+                        </outputfilterchain>
+                    </redirector>
+                </exec>
+                <echo>Cleaning up</echo>
+                <exec executable="kill">
+                    <arg value="-9"/>
+                    <arg value="${dynamodb.pid}"/>
+                </exec>
+            </finally>
+        </trycatch>
     </target>
 </project>
