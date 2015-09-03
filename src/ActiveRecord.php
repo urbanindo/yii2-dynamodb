@@ -122,7 +122,6 @@ class ActiveRecord extends BaseActiveRecord {
         $this->setOldAttributes($values);
         $this->afterSave(true, $changedAttributes);
     }
-    
     /**
      * Returns the primary key **name(s)** for this AR class.
      *
@@ -154,8 +153,7 @@ class ActiveRecord extends BaseActiveRecord {
         return self::$_primaryKeys[get_called_class()];
     }
     
-    public static function batchInsert($values)
-    {
+    public static function batchInsert($values){
         self::getDb()->createCommand()->putItems(static::tableName(), $values);
     }
     
@@ -167,4 +165,15 @@ class ActiveRecord extends BaseActiveRecord {
         return self::find()->where($condition)->using($using)->all();
     }
 
+    // TODO
+    public static function updateAll($attributes, $condition = '') {
+        parent::updateAll($attributes, $condition);
+    }
+    public static function updateAllCounters($counters, $condition = '') {
+        parent::updateAllCounters($counters, $condition);
+    }
+    public static function deleteAll($condition = '', $params = array()) {
+        parent::deleteAll($condition, $params);
+    }
+    
 }
