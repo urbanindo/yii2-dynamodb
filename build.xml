@@ -1,39 +1,59 @@
 <project name="yii2-dynamodb" default="test" basedir=".">
     <taskdef resource="net/sf/antcontrib/antcontrib.properties"/>
     <property name="dynamodbpath" location="${basedir}/dynamodb/DynamoDBLocal.jar"/>
-    <target name="test">
+    <target name="run-test">
+        <exec executable="${basedir}/vendor/bin/phpunit" failonerror="true">
+        </exec>
+    </target>
+    <target name="start-server">
         <echo>Starting server</echo>
         <exec executable="java" spawn="true">
             <arg value="-jar"/>
             <arg value="${dynamodbpath}"/>
             <arg value="-inMemory"/>
+            <arg value="--port" />
+            <arg value="2700" />
         </exec>
         <sleep seconds="3"/>
+    </target>
+    <target name="stop-server">
+        <exec executable="jps">
+            <arg value="-l"/>
+            <redirector outputproperty="dynamodb.pid">
+                <outputfilterchain>
+                    <linecontains>
+                        <contains value="DynamoDBLocal.jar"/>
+                    </linecontains>
+                    <replaceregex pattern=" ${dynamodbpath}" replace="" />
+                </outputfilterchain>
+            </redirector>
+        </exec>
+        <echo>Cleaning up</echo>
+        <exec executable="kill">
+            <arg value="-9"/>
+            <arg value="${dynamodb.pid}"/>
+        </exec>
+    </target>
+    <target name="test">
+        <antcall target="start-server"></antcall>
         <echo>Running phpunit</echo>
         <trycatch property="foo" reference="bar">
             <try>
-                <exec executable="${basedir}/vendor/bin/phpunit" failonerror="true">
-                </exec>
+                <antcall target="run-test">
+                </antcall>
             </try>
 
             <finally>
-                <exec executable="jps">
-                    <arg value="-l"/>
-                    <redirector outputproperty="dynamodb.pid">
-                        <outputfilterchain>
-                            <linecontains>
-                                <contains value="DynamoDBLocal.jar"/>
-                            </linecontains>
-                            <replaceregex pattern=" ${dynamodbpath}" replace="" />
-                        </outputfilterchain>
-                    </redirector>
-                </exec>
-                <echo>Cleaning up</echo>
-                <exec executable="kill">
-                    <arg value="-9"/>
-                    <arg value="${dynamodb.pid}"/>
-                </exec>
+                <antcall target="stop-server">
+                </antcall>
             </finally>
         </trycatch>
+    </target>
+    <target name="download-dynamo-db-local">
+        <mkdir dir="${basedir}/dynamodb"/>
+        <get dest="${basedir}/dynamodb/dynamodb.zip">
+          <url url="http://dynamodb-local.s3-website-us-west-2.amazonaws.com/dynamodb_local_latest.zip"/> 
+        </get>
+        <unzip src="${basedir}/dynamodb/dynamodb.zip" dest="${basedir}/dynamodb/"/>
     </target>
 </project>
