@@ -63,4 +63,11 @@ class ActiveQuery extends Query implements ActiveQueryInterface {
         $this->trigger(self::EVENT_INIT);
     }
     
+    public function all($db = null) {}
+
+    public function one($db = null) {}
+
+    public function asArray() {}
+
+    public function batch($batchSize = 100, $db = null) {}
 }
