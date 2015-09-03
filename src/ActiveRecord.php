@@ -9,6 +9,8 @@ namespace UrbanIndo\Yii2\DynamoDb;
 
 use Yii;
 use yii\db\BaseActiveRecord;
+use yii\helpers\Inflector;
+use yii\helpers\StringHelper;
 
 /**
  * ActiveRecord is the base class for classes representing relational data in terms of objects.
@@ -39,6 +41,7 @@ use yii\db\BaseActiveRecord;
  */
 class ActiveRecord extends BaseActiveRecord {
 
+    protected static $_primaryKeys = [];
     /**
      * Returns the database connection used by this AR class.
      * By default, the "dynamodb" application component is used as the database connection.
@@ -119,7 +122,7 @@ class ActiveRecord extends BaseActiveRecord {
         $this->setOldAttributes($values);
         $this->afterSave(true, $changedAttributes);
     }
-
+    
     /**
      * Returns the primary key **name(s)** for this AR class.
      *
@@ -134,19 +137,34 @@ class ActiveRecord extends BaseActiveRecord {
      * @return string[] the primary key name(s) for this AR class.
      */
     public static function primaryKey() {
-        $client = self::getDb()->getClient();
-        $command = $client->getCommand('DescribeTable',
-                [
-            'TableName;'
-        ]);
-        $result = $client->execute($command);
-        $keySchema = $result['KeySchema'];
-        $keys = [];
-        foreach ($keySchema as $key) {
-            $idx = $key['KeyType'] == 'HASH' ? 0 : 1;
-            $keys[$idx] = $key['AttributeName'];
+        if (!isset(self::$_primaryKeys[get_called_class()])) {
+            $client = self::getDb()->getClient();
+            $command = $client->getCommand('DescribeTable', [
+                'TableName' => self::tableName()
+            ]);
+            $result = $client->execute($command);
+            $keySchema = $result['KeySchema'];
+            $keys = [];
+            foreach ($keySchema as $key) {
+                $idx = $key['KeyType'] == 'HASH' ? 0 : 1;
+                $keys[$idx] = $key['AttributeName'];
+            }
+            self::$_primaryKeys[get_called_class()] = $keys;
         }
-        return $keys;
+        return self::$_primaryKeys[get_called_class()];
+    }
+    
+    public static function batchInsert($values)
+    {
+        self::getDb()->createCommand()->putItems(static::tableName(), $values);
+    }
+    
+    public static function findOne($condition) {
+        return self::find()->where($condition)->using(Query::TYPE_GET)->one();
+    }
+    
+    public static function findAll($condition, $using = Query::TYPE_BATCH_GET) {
+        return self::find()->where($condition)->using($using)->all();
     }
 
 }
