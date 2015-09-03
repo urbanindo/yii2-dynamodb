@@ -29,7 +29,7 @@ class Connection extends \yii\base\Component {
      * @var DynamoDbClient the DynamoDB client.
      */
     protected $_client;
-    
+    protected $_builder;
     /**
      * Initialize the dynamodb client.
      */
@@ -53,8 +53,22 @@ class Connection extends \yii\base\Component {
      * @return Command the DB command
      */
     public function createCommand($config = []) {
-        $config['db'] = $this;
-        $command = new Command($config);
+        $command = Yii::createObject(array_merge($config, [
+            'class' => Command::class,
+            'db' => $this
+        ]));
         return $command;
+    }
+
+    /**
+     * 
+     * @return QueryBuilder
+     */
+    public function getQueryBuilder() {
+        if ($this->_builder === null) {
+            $this->_builder = new QueryBuilder($this);
+        }
+        return $this->_builder;
+
     }
 }

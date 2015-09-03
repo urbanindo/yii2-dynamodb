@@ -154,4 +154,6 @@ class Query extends Component implements QueryInterface
     {
         // todo
     }
+    
+    // todo override where so it can filter primary key or not
 }
