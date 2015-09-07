@@ -1,6 +1,6 @@
 <?php
 
-define('DYNAMODB_URL', 'http://localhost:8000');
+define('DYNAMODB_URL', 'http://localhost:2700');
 
 error_reporting(-1);
 define('YII_ENABLE_ERROR_HANDLER', false);
@@ -22,7 +22,7 @@ $application = new \yii\console\Application([
             'class' => '\UrbanIndo\Yii2\DynamoDb\Connection',
             'config' => [
                 'credentials' => [
-                    'key' => 'AKIA1234567890',
+                    'key' => 'AKIA',
                     'secret' => '1234567890',
                 ],
                 'region' => 'ap-southeast-1',
