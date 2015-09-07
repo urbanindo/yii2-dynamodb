@@ -1,5 +1,5 @@
 <project name="yii2-dynamodb" default="test" basedir=".">
-    <taskdef resource="net/sf/antcontrib/antcontrib.properties"/>
+    <taskdef resource="net/sf/antcontrib/antcontrib.properties" classpath="dynamodb/ant-contrib.jar" />
     <property name="dynamodbpath" location="${basedir}/dynamodb/DynamoDBLocal.jar"/>
     <target name="run-test">
         <exec executable="${basedir}/vendor/bin/phpunit" failonerror="true">
@@ -37,7 +37,7 @@
     <target name="test">
         <antcall target="start-server"></antcall>
         <echo>Running phpunit</echo>
-        <trycatch property="foo" reference="bar">
+        <trycatch>
             <try>
                 <antcall target="run-test">
                 </antcall>
@@ -49,8 +49,11 @@
             </finally>
         </trycatch>
     </target>
-    <target name="download-dynamo-db-local">
+    <target name="prepare">
         <mkdir dir="${basedir}/dynamodb"/>
+        <get dest="dynamodb/ant-contrib.jar" >
+            <url url="http://central.maven.org/maven2/ant-contrib/ant-contrib/1.0b3/ant-contrib-1.0b3.jar" />
+        </get>
         <get dest="${basedir}/dynamodb/dynamodb.zip">
           <url url="http://dynamodb-local.s3-website-us-west-2.amazonaws.com/dynamodb_local_latest.zip"/> 
         </get>
