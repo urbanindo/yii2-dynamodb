@@ -63,11 +63,19 @@ class ActiveQuery extends Query implements ActiveQueryInterface {
         $this->trigger(self::EVENT_INIT);
     }
     
-    public function all($db = null) {}
+//    public function all($db = null) {}
 
-    public function one($db = null) {}
+    public function one($db = null) {
+        /* @var $response \Guzzle\Service\Resource\Model */
+        $response = parent::one($db);
+        /* @var $object ActiveRecord */
+        $object = new $this->modelClass;
+        print_r($response->get('Item'));
+        $object->setAttributes($response->get('Item'), false);
+        return $object;
+    }
 
-    public function asArray() {}
+//    public function asArray($value = true) {}
 
-    public function batch($batchSize = 100, $db = null) {}
+//    public function batch($batchSize = 100, $db = null) {}
 }

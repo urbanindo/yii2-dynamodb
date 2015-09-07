@@ -4,12 +4,16 @@
  */
 namespace UrbanIndo\Yii2\DynamoDb;
 
-use Aws\DynamoDb\Marshaler;
+use Aws\DynamoDb\DynamoDbClient;
+use Guzzle\Service\Resource\Model;
+use Yii;
+use yii\base\NotSupportedException;
+use yii\base\Object;
 
 /**
  * @author Petra Barus <petra.barus@gmail.com>
  */
-class Command extends \yii\base\Object {
+class Command extends Object {
     
     /**
      * @var Connection
@@ -21,7 +25,7 @@ class Command extends \yii\base\Object {
     public function init() {
     }
     /**
-     * @return \Aws\DynamoDb\DynamoDbClient
+     * @return DynamoDbClient
      */
     protected function getClient() {
         return $this->db->getClient();
@@ -29,7 +33,7 @@ class Command extends \yii\base\Object {
 
     /**
      * 
-     * @return \Guzzle\Service\Resource\Model
+     * @return Model
      */
     public function execute() {
 
@@ -74,24 +78,30 @@ class Command extends \yii\base\Object {
      * @param array $values
      */
     public function putItems($tableName, $values) {
-        $marshaler = new Marshaler();
-        $chunks = array_chunk($values, 25);
-        $response = [];
-        foreach ($chunks as $chunk) {
-            $request = [
-                'RequestItems' => [
-                    $tableName => []
+        $unprocessedItems = [];
+        foreach ($values as $item) {
+            $unprocessedItems[] = [
+                'PutRequest' => [
+                    'Item' => Marshaler::marshal($item)
                 ]
             ];
-            foreach ($chunk as $item) {
-                $request['RequestItems'][$tableName][] = [
-                    'PutRequest' => [
-                        'Item' => $marshaler->marshalItem($item)
+                    
+        }
+        while (!empty($unprocessedItems)) {
+            $chunks = array_chunk($unprocessedItems, 25);
+            $unprocessedItems = [];
+            foreach ($chunks as $chunk) {
+                $request = [
+                    'RequestItems' => [
+                        $tableName => $chunk
                     ]
                 ];
+                $command = $this->getClient()->getCommand('BatchWriteItem', $request);
+                $response = $this->getClient()->execute($command);
+                if (isset($response->get("UnprocessedItems")[$tableName])) {
+                    $unprocessedItems = $unprocessedItems + $response->get("UnprocessedItems")[$tableName];
+                }
             }
-            $command = $this->getClient()->getCommand('BatchWriteItem', $request);
-            $response[] = $this->getClient()->execute($command);
         }
         return $response;
     }
@@ -107,17 +117,45 @@ class Command extends \yii\base\Object {
             return $count;
         } else {
             // TODO use query Select => COUNT
-            throw new \yii\base\NotSupportedException('Not implemented yet');
+            throw new NotSupportedException('Not implemented yet');
         }
     }
-    
+
+    /**
+     * Increase can be done unlimited time, decrease max 4 times a day
+     * @param string $tablename
+     * @param int $readThroughput
+     * @param int $writeThroughput
+     * @return array @see http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_TableDescription.html
+     */
+    public function updateThroughput($tablename, $readThroughput, $writeThroughput) {
+        $request = [
+            'TableName' => $tablename,
+            'ProvisionedThroughput' => [
+                'ReadCapacityUnits' => $readThroughput,
+                'WriteCapacityUnits' => $writeThroughput
+            ]
+        ];
+        $command = $this->getClient()->getCommand('UpdateTable', $request);
+        return $this->getClient()->execute($command);
+    }
+    /**
+     * 
+     * @param type $tableName
+     * @return array @see http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_TableDescription.html
+     */
+    public function describeTable($tableName) {
+        $command = $this->getClient()->getCommand('DescribeTable', [
+                'TableName' => $tableName,
+            ]);
+        return $this->getClient()->execute($command)->get('Table');
+    }
     public function queryOne() {
         $response = $this->execute();
-        return $response->get('Item');
+        return $response;
     }
     public function queryAll() {
         $response = $this->execute();
-        print_r($response);
         return $response->get('Responses');
     }
 }
