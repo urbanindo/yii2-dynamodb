@@ -43,7 +43,6 @@ class Query extends Component implements QueryInterface
      */
     public $expressionAttributesNames = [];
     public $expressionAttributesValues = [];
-    public $modelClass;    
     public $consistentRead;
     public $returnConsumedCapacity;
     public $from;

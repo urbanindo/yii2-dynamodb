@@ -70,7 +70,6 @@ class ActiveQuery extends Query implements ActiveQueryInterface {
         $response = parent::one($db);
         /* @var $object ActiveRecord */
         $object = new $this->modelClass;
-        print_r($response->get('Item'));
         $object->setAttributes($response->get('Item'), false);
         return $object;
     }

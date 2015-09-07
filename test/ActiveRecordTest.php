@@ -1,6 +1,6 @@
 <?php
 
-namespace test;
+namespace CommandTest;
 
 class ActiveRecordTest extends \PHPUnit_Framework_TestCase {
     const FIELD_PROPERTY_VIEW = 1;
@@ -13,35 +13,35 @@ class ActiveRecordTest extends \PHPUnit_Framework_TestCase {
     const FIELD_PROPERTY_CONTACT = 8;
 
     public function testInsertData() {
-//        $db = \Yii::$app->dynamodb;
-//        $command = $db->createCommand();
-//        /* @var $command \UrbanIndo\Yii2\DynamoDb\Command */
-//        $command->createTable(\test\data\PropertyAnalyticsStat::tableName(), [
-//            'AttributeDefinitions' => [
-//                [
-//                    'AttributeName' => 'propertyId',
-//                    'AttributeType' => 'N'
-//                ],
-//                [
-//                    'AttributeName' => 'day',
-//                    'AttributeType' => 'S'
-//                ]
-//            ],
-//            'KeySchema' => [
-//                [
-//                    'AttributeName' => 'propertyId',
-//                    'KeyType' => 'HASH',
-//                ],
-//                [
-//                    'AttributeName' => 'day',
-//                    'KeyType' => 'RANGE',
-//                ]
-//            ],
-//            'ProvisionedThroughput' => [
-//                'ReadCapacityUnits' => 10,
-//                'WriteCapacityUnits' => 10
-//            ]
-//        ]);
+        $db = \Yii::$app->dynamodb;
+        $command = $db->createCommand();
+        /* @var $command \UrbanIndo\Yii2\DynamoDb\Command */
+        $command->createTable(\test\data\PropertyAnalyticsStat::tableName(), [
+            'AttributeDefinitions' => [
+                [
+                    'AttributeName' => 'propertyId',
+                    'AttributeType' => 'N'
+                ],
+                [
+                    'AttributeName' => 'day',
+                    'AttributeType' => 'S'
+                ]
+            ],
+            'KeySchema' => [
+                [
+                    'AttributeName' => 'propertyId',
+                    'KeyType' => 'HASH',
+                ],
+                [
+                    'AttributeName' => 'day',
+                    'KeyType' => 'RANGE',
+                ]
+            ],
+            'ProvisionedThroughput' => [
+                'ReadCapacityUnits' => 10,
+                'WriteCapacityUnits' => 10
+            ]
+        ]);
         $json = [];
         $filter = [
             'Property View' => self::FIELD_PROPERTY_VIEW,
@@ -80,7 +80,6 @@ class ActiveRecordTest extends \PHPUnit_Framework_TestCase {
             'day' => ['20150802', '20150802']
         ])->using(\UrbanIndo\Yii2\DynamoDb\Query::TYPE_BATCH_GET)->all();
         
-        print_r($y);
         $this->assertNotEmpty($x);
         $this->assertNotEmpty($y);
     }
