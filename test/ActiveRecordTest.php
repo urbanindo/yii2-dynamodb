@@ -1,6 +1,6 @@
 <?php
 
-namespace CommandTest;
+namespace UrbanIndo\Yii2\DynamoDb\Test;
 
 class ActiveRecordTest extends \PHPUnit_Framework_TestCase {
     const FIELD_PROPERTY_VIEW = 1;
@@ -70,12 +70,12 @@ class ActiveRecordTest extends \PHPUnit_Framework_TestCase {
             }
             $data[] = $datum;
         }
-        data\PropertyAnalyticsStat::batchInsert($data);
-        $x = data\PropertyAnalyticsStat::findOne([
+        \test\data\PropertyAnalyticsStat::batchInsert($data);
+        $x = \test\data\PropertyAnalyticsStat::findOne([
             'propertyId' => 10000000,
             'day' => '20150802'
         ]);
-        $y = data\PropertyAnalyticsStat::find()->where([
+        $y = \test\data\PropertyAnalyticsStat::find()->where([
             'propertyId' => [10000000,10000001],
             'day' => ['20150802', '20150802']
         ])->using(\UrbanIndo\Yii2\DynamoDb\Query::TYPE_BATCH_GET)->all();
