@@ -36,11 +36,11 @@ class Command extends Object {
      * @return Model
      */
     public function execute() {
-
         Yii::info("{$this->method}: " . json_encode($this->request) , 'yii\db\Command::query');
         $command = $this->getClient()->getCommand($this->method, $this->request);
         return $this->getClient()->execute($command);
     }
+    
     /**
      * Create new table.
      * @param string $tableName the name of the table.
@@ -59,8 +59,9 @@ class Command extends Object {
      * @param array $values
      */
     public function insert($tableName, $values) {
-        $this->putItem($tableName, $values);
+        return $this->putItem($tableName, $values);
     }
+    
     /**
      * @param string $tableName
      * @param array $values
@@ -71,7 +72,13 @@ class Command extends Object {
             'TableName' => $tableName,
             'Item' => $marshaler->marshalItem($values),
         ]);
-        return $this->getClient()->execute($command);
+        $marshaler->marshalItem($values);
+        try {
+            $this->getClient()->execute($command);
+            return true;
+        } catch (\Exception $exc) {
+            return false;
+        }
     }
     /**
      * @param string $tableName
@@ -140,7 +147,6 @@ class Command extends Object {
         return $this->getClient()->execute($command);
     }
     /**
-     * 
      * @param type $tableName
      * @return array @see http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_TableDescription.html
      */
@@ -150,6 +156,25 @@ class Command extends Object {
             ]);
         return $this->getClient()->execute($command)->get('Table');
     }
+    
+    /**
+     * Return whether a table exists or not.
+     * @param string $tableName the name of the table.
+     * @return boolean
+     */
+    public function tableExists($tableName) {
+        try {
+            $this->describeTable($tableName);
+            return true;
+        } catch (\Aws\DynamoDb\Exception\ResourceNotFoundException $exc) {
+            return false;
+        }
+    }
+    
+    /**
+     * 
+     * @return type
+     */
     public function queryOne() {
         $response = $this->execute();
         return $response;

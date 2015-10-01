@@ -40,8 +40,9 @@ use yii\helpers\StringHelper;
  * @author Petra Barus <petra.barus@gmail.com>
  */
 class ActiveRecord extends BaseActiveRecord {
-
+    
     protected static $_primaryKeys = [];
+    
     /**
      * Returns the database connection used by this AR class.
      * By default, the "dynamodb" application component is used as the database connection.
@@ -116,11 +117,11 @@ class ActiveRecord extends BaseActiveRecord {
 
         $this->getDb()->createCommand()->insert($this->tableName(), $values);
 
-        //TODO: Insert the key.
-
         $changedAttributes = array_fill_keys(array_keys($values), null);
         $this->setOldAttributes($values);
         $this->afterSave(true, $changedAttributes);
+        
+        return true;
     }
     /**
      * Returns the primary key **name(s)** for this AR class.
@@ -157,22 +158,65 @@ class ActiveRecord extends BaseActiveRecord {
         self::getDb()->createCommand()->putItems(static::tableName(), $values);
     }
     
-    public static function findOne($condition) {
-        return self::find()->where($condition)->using(Query::TYPE_GET)->one();
+    /**
+     * Search for one object.
+     * @param array $condition the condition for search.
+     * @param array $options addition attribute.
+     * @return return static
+     */
+    public static function findOne($condition, $options = null) {
+        return self::createQueryWithParameter($options)->where($condition)->one();
     }
     
-    public static function findAll($condition, $using = Query::TYPE_BATCH_GET) {
-        return self::find()->where($condition)->using($using)->all();
+    /**
+     * Search for all object that matches condition.
+     * @param array $condition the condition for search.
+     * @param array $options addition attribute.
+     * @return return static
+     */
+    public static function findAll($condition, $options = null) {
+        if ($options == null) {
+            $options = ['using' => Query::TYPE_BATCH_GET];
+        }
+        return self::createQueryWithParameter()->where($condition)->all();
+    }
+    
+    /**
+     * Create query and assign options if exists.
+     * @param array $options
+     * @return ActiveQuery the query.
+     */
+    private static function createQueryWithParameter($options = null) {
+        $query = self::find();
+        if ($options !== null) {
+            foreach($options as $attribute => $value) {
+                $query->{$attribute} = $value;
+            }
+        }
+        return $query;
     }
 
-    // TODO
+    /**
+     * @inheritdoc
+     * @todo
+     */
     public static function updateAll($attributes, $condition = '') {
         parent::updateAll($attributes, $condition);
     }
+    
+    /**
+     * @inheritdoc
+     * @todo
+     */
     public static function updateAllCounters($counters, $condition = '') {
         parent::updateAllCounters($counters, $condition);
     }
-    public static function deleteAll($condition = '', $params = array()) {
+    
+    /**
+     * @inheritdoc
+     * @todo
+     */
+    public static function deleteAll($condition = '', $params = []) {
         parent::deleteAll($condition, $params);
     }
     

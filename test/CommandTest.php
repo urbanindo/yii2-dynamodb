@@ -1,23 +1,10 @@
 <?php
 
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
-namespace UrbanIndo\Yii2\DynamoDb\Test;
-
-/**
- * Description of Test
- *
- * @author adinata
- */
-class CommandTest extends \PHPUnit_Framework_TestCase {
+class CommandTest extends TestCase {
     
     public function testCreate() {
         /* @var $client \Aws\DynamoDb\DynamoDbClient */
-        $client = \Yii::$app->dynamodb->getClient();
+        $client = Yii::$app->dynamodb->getClient();
         $command = $client->getCommand('CreateTable', [
             'TableName' => 'Testing',
             'KeySchema' => [
@@ -44,7 +31,7 @@ class CommandTest extends \PHPUnit_Framework_TestCase {
     }
     public function testPut() {
         /* @var $client \Aws\DynamoDb\DynamoDbClient */
-        $client = \Yii::$app->dynamodb->getClient();
+        $client = Yii::$app->dynamodb->getClient();
         
         $marshaler = new \UrbanIndo\Yii2\DynamoDb\Marshaler();
         $command = $client->getCommand('PutItem', [
@@ -65,7 +52,7 @@ class CommandTest extends \PHPUnit_Framework_TestCase {
     }
     public function testGet() {
         /* @var $client \Aws\DynamoDb\DynamoDbClient */
-        $client = \Yii::$app->dynamodb->getClient();
+        $client = Yii::$app->dynamodb->getClient();
         $command = $client->getCommand('GetItem', [
             'TableName' => 'Testing',
             "Key" => [

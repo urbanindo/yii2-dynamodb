@@ -19,6 +19,7 @@ use yii\base\NotSupportedException;
 class Query extends Component implements QueryInterface
 {
     use QueryTrait;
+    
     const TYPE_BATCH_GET = 'BatchGetItem';
     const TYPE_GET = 'GetItem';
     const TYPE_QUERY = 'Query';
@@ -35,18 +36,43 @@ class Query extends Component implements QueryInterface
      * @var string Type of query that will be executed, 'Get', 'BatchGet', 'Query', or 'Scan'. Defaults to 'BatchGet'
      * @see from()
      */
-    public $using = 'BatchGet';
+    public $using = self::TYPE_SCAN;
 
     /**
      * @var array list of query parameter values indexed by parameter placeholders.
      * For example, `[':name' => 'Dan', ':age' => 31]`.
      */
     public $expressionAttributesNames = [];
+    
+    /**
+     * 
+     */
     public $expressionAttributesValues = [];
+    
+    /**
+     *
+     * @var type 
+     */
     public $consistentRead;
+    
+    /**
+     *
+     * @var type 
+     */
     public $returnConsumedCapacity;
+    
+    /**
+     *
+     * @var type 
+     */
     public $from;
+    
+    /**
+     *
+     * @var type 
+     */
     public $keys = [];
+    
     /**
      * Executes the query and returns all results as an array.
      * @param Connection $db the database connection used to execute the query.
@@ -109,24 +135,47 @@ class Query extends Component implements QueryInterface
         return $this;
     }
 
+    /**
+     * Whether to use consistent read in the query.
+     * @return static
+     */
     public function withConsistentRead() {
         $this->consistentRead = true;
         return $this;
     }
 
+    /**
+     * Whether to not use consistent read in the query.
+     * @return static
+     */
     public function withoutConsistentRead() {
         $this->consistentRead = false;
         return $this;
     }
+    
+    /**
+     * Whether to return the consumed capacity.
+     * @return static
+     */
     public function withConsumedCapacity() {
         $this->returnConsumedCapacity = true;
         return $this;
     }
+    
+    /**
+     * Whether not to return the consumed capacity.
+     * @return static
+     */
     public function withoutConsumedCapacity() {
         $this->returnConsumedCapacity = false;
         return $this;
     }
 
+    /**
+     * Returns all object that matches the query.
+     * @param Connection $db the dynamodb connection.
+     * @return
+     */
     public function all($db = null) {
         return $this->createCommand($db)->queryAll();
     }
@@ -141,6 +190,7 @@ class Query extends Component implements QueryInterface
     }
 
     public function one($db = null) {
+        $this->using = self::TYPE_GET;
         return $this->createCommand($db)->queryOne();
     }
 
@@ -153,6 +203,4 @@ class Query extends Component implements QueryInterface
     {
         // todo
     }
-    
-    // todo override where so it can filter primary key or not
 }

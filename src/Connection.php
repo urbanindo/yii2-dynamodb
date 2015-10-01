@@ -54,7 +54,7 @@ class Connection extends \yii\base\Component {
      */
     public function createCommand($config = []) {
         $command = Yii::createObject(array_merge($config, [
-            'class' => Command::class,
+            'class' => 'UrbanIndo\Yii2\DynamoDb\Command',
             'db' => $this
         ]));
         return $command;

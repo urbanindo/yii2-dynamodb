@@ -63,14 +63,17 @@ class ActiveQuery extends Query implements ActiveQueryInterface {
         $this->trigger(self::EVENT_INIT);
     }
     
-//    public function all($db = null) {}
-
+    /**
+     * @param Connection $db
+     * @return static
+     */
     public function one($db = null) {
         /* @var $response \Guzzle\Service\Resource\Model */
         $response = parent::one($db);
         /* @var $object ActiveRecord */
         $object = new $this->modelClass;
-        $object->setAttributes($response->get('Item'), false);
+        $marshaller = new \Aws\DynamoDb\Marshaler();
+        $object->setAttributes($marshaller->unmarshalItem($response->get('Item')), false);
         return $object;
     }
 
