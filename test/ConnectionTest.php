@@ -1,8 +1,6 @@
 <?php
 
-namespace UrbanIndo\Yii2\DynamoDb\Test;
-
-class ConnectionTest extends \PHPUnit_Framework_TestCase {
+class ConnectionTest extends TestCase {
     
     public function testConnectionClient() {
         $component = new \UrbanIndo\Yii2\DynamoDb\Connection([

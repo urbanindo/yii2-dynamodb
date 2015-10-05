@@ -17,7 +17,9 @@ use yii\base\Object;
  * @author Petra Barus <petra.barus@gmail.com>
  */
 class QueryBuilder extends Object {
+    
     const PARAM_PREFIX = ':var';
+    
     /**
      * @var Connection the database connection.
      */
@@ -70,16 +72,16 @@ class QueryBuilder extends Object {
     private function buildKey(Query& $query) {
         $condition = $query->where;
         if (!is_array($condition)) {
-            throw new NotSupportedException('String conditions in where() are not supported by dynamodb.');
+            throw new NotSupportedException('String conditions in where() are not supported by this extension. Please use attribute map ["key" => "value"].');
         }
         if (isset($condition[0])) { // operator format: operator, operand 1, operand 2, ...
             throw new InvalidParamException('`Query::TYPE_GET` only supports hash format in condition (e.g. "key"=>"value")');
         } else { // hash format: 'column1' => 'value1', 'column2' => 'value2', ...
             $parts = Marshaler::marshal($condition);
-            
             return $parts;
         }
     }
+    
     private function buildBatchGetItem(Query $query) {
         $condition = $query->where;
         
@@ -127,6 +129,12 @@ class QueryBuilder extends Object {
                 $query->from : // get table name from active record incase of from not called
                 call_user_func([$query->modelClass, 'tableName']);
     }
+    
+    /**
+     * 
+     * @param type $item
+     * @param type $query
+     */
     private function setCommonRequest(&$item, &$query) {
         if (isset($query->consistentRead)) {
             $item['ConsistentRead'] = $query->consistentRead;
@@ -142,9 +150,15 @@ class QueryBuilder extends Object {
         }
     }
     
+    /**
+     * 
+     * @param type $select
+     * @return type
+     */
     private function buildSelect($select) {
         return implode(',', $select);
     }
+    
     /**
      * where -> 
      *  key condition expression + expression attribute value, 
@@ -233,6 +247,7 @@ class QueryBuilder extends Object {
             return [];
         }
     }
+    
     private function buildBetweenCondition($operator, $operands, &$query) {
         throw new NotSupportedException('not ready');
     }

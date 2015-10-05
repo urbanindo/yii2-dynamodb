@@ -1,142 +1,100 @@
 <?php
 
-namespace UrbanIndo\Yii2\DynamoDb\Test;
-
-class ActiveRecordTest extends \PHPUnit_Framework_TestCase {
-    const FIELD_PROPERTY_VIEW = 1;
-    const FIELD_PROPERTY_VISIT = 2;
-    const FIELD_HOME_PREMIUM_VIEW = 3;
-    const FIELD_HOME_PREMIUM_VISIT = 4;
-    const FIELD_FEATURED_PREMIUM_VIEW = 5;
-    const FIELD_FEATURED_PREMIUM_VISIT = 6;
-    const FIELD_PROPERTY_MESSAGE = 7;
-    const FIELD_PROPERTY_CONTACT = 8;
-
-    public function testInsertData() {
-        $db = \Yii::$app->dynamodb;
-        $command = $db->createCommand();
-        /* @var $command \UrbanIndo\Yii2\DynamoDb\Command */
-        $command->createTable(\test\data\PropertyAnalyticsStat::tableName(), [
-            'AttributeDefinitions' => [
-                [
-                    'AttributeName' => 'propertyId',
-                    'AttributeType' => 'N'
-                ],
-                [
-                    'AttributeName' => 'day',
-                    'AttributeType' => 'S'
-                ]
-            ],
-            'KeySchema' => [
-                [
-                    'AttributeName' => 'propertyId',
-                    'KeyType' => 'HASH',
-                ],
-                [
-                    'AttributeName' => 'day',
-                    'KeyType' => 'RANGE',
-                ]
-            ],
-            'ProvisionedThroughput' => [
-                'ReadCapacityUnits' => 10,
-                'WriteCapacityUnits' => 10
-            ]
-        ]);
-        $json = [];
-        $filter = [
-            'Property View' => self::FIELD_PROPERTY_VIEW,
-            'Property Visit' => self::FIELD_PROPERTY_VISIT,
-            'Home Premium View' => self::FIELD_HOME_PREMIUM_VIEW,
-            'Home Premium Visit' => self::FIELD_HOME_PREMIUM_VISIT,
-            'Featured Premium View' => self::FIELD_FEATURED_PREMIUM_VIEW,
-            'Featured Premium Visit' => self::FIELD_FEATURED_PREMIUM_VISIT,
-            'Property Message' => self::FIELD_PROPERTY_MESSAGE,
-            'Property Contact' => self::FIELD_PROPERTY_CONTACT,
+class ActiveRecordTest extends TestCase {
+    
+    public function testInsertAndFindOne() {
+        
+        $objectToInsert = new \test\data\Customer();
+        $id = (int) \Faker\Provider\Base::randomNumber(5);
+        $faker = \Faker\Factory::create();
+        $objectToInsert->id = $id;
+        $objectToInsert->name = $faker->name;
+        $objectToInsert->contacts = [
+            'telephone1' => 123456,
+            'telephone2' => 345678,
+            'telephone3' => 345678,
+        ];
+        $objectToInsert->prices = [
+            1000000,
+            1000000,
+            1000000,
+            1000000
+        ];
+        $objectToInsert->kids = [
+            'Alice',
+            'Billy',
+            'Charlie',
         ];
         
-        $data = [];
-        $fakestats = [];
-        foreach (range(1,8) as $type) {
-            $fakestats[$type] = 1000;
-        }
-        foreach (range(10000000, 10000025) as $i) {
-            $datum = [
-                'propertyId' => $i,
-                'day' => '20150802',
-                'value' => []
-            ];
-            foreach (range(0, 23) as $hour) {
-                $datum['value'][$hour] = $fakestats;
-            }
-            $data[] = $datum;
-        }
-        \test\data\PropertyAnalyticsStat::batchInsert($data);
-        $x = \test\data\PropertyAnalyticsStat::findOne([
-            'propertyId' => 10000000,
-            'day' => '20150802'
-        ]);
-        $y = \test\data\PropertyAnalyticsStat::find()->where([
-            'propertyId' => [10000000,10000001],
-            'day' => ['20150802', '20150802']
-        ])->using(\UrbanIndo\Yii2\DynamoDb\Query::TYPE_BATCH_GET)->all();
-        
-        $this->assertNotEmpty($x);
-        $this->assertNotEmpty($y);
+        $this->assertTrue($objectToInsert->save(false));
+        $objectFromFind = \test\data\Customer::findOne(['id' => $id]);
+       
+        /* @var $objectFromFind data\Customer */
+        $this->assertNotNull($objectFromFind);
+        $this->assertEquals($id, $objectFromFind->id);
+        $this->assertEquals($objectToInsert->name, $objectFromFind->name);
+        $this->assertEquals($objectToInsert->kids, $objectFromFind->kids);
     }
     
-//    public function testInsertAndFindOne() {
-//        $db = \Yii::$app->dynamodb;
-//        /* @var $db \UrbanIndo\Yii2\DynamoDb\Connection */
-//        $command = $db->createCommand();
-//        /* @var $command \UrbanIndo\Yii2\DynamoDb\Command */
-//        
-//        $command->createTable(\test\data\Customer::tableName(), [
-//            'AttributeDefinitions' => [
-//                [
-//                    'AttributeName' => 'id',
-//                    'AttributeType' => 'N'
-//                ]
-//            ],
-//            'KeySchema' => [
-//                [
-//                    'AttributeName' => 'id',
-//                    'KeyType' => 'HASH',
-//                ]
-//            ],
-//            'ProvisionedThroughput' => [
-//                'ReadCapacityUnits' => 10,
-//                'WriteCapacityUnits' => 10
-//            ]
-//        ]);
-//        $objectToInsert = new data\Customer();
-//        $id = \Faker\Provider\Base::randomNumber(5);
-//        $faker = \Faker\Factory::create();
-//        $objectToInsert->id = $id;
-//        $objectToInsert->name = $faker->name;
-//        $objectToInsert->contacts = [
-//            'telephone1' => 123456,
-//            'telephone2' => 345678,
-//            'telephone3' => 345678,
-//        ];
-//        $objectToInsert->prices = [
-//            1000000,
-//            1000000,
-//            1000000,
-//            1000000
-//        ];
-//        $objectToInsert->kids = [
-//            'Alice',
-//            'Billy',
-//            'Charlie',
-//        ];
-//        
-////        $this->assertTrue($objectToInsert->save(false));
-////        
-//        $objectFromFind = data\Customer::findOne($id);
-////        print_r($objectFromFind);
-//        /* @var $objectFromFind data\Customer */
-////        $this->assertNotNull($objectFromFind);
-////        $this->assertEquals($id, $objectFromFind->id);
-////        $this->assertEquals($objectToInsert->name, $objectFromFind->name);
-//    }
+    public function testInsertAndFindAll() {
+
+        $id1 = (int) \Faker\Provider\Base::randomNumber(5);
+        $faker = \Faker\Factory::create();
+        $objectToInsert1 = new \test\data\Customer();
+        $objectToInsert1->id = $id1;
+        $objectToInsert1->name = $faker->name;
+        $objectToInsert1->contacts = [
+            'telephone1' => 123456,
+            'telephone2' => 345678,
+            'telephone3' => 345678,
+        ];
+        $objectToInsert1->prices = [
+            1000000,
+            1000000,
+            1000000,
+            1000000
+        ];
+        $objectToInsert1->kids = [
+            'Alice',
+            'Billy',
+            'Charlie',
+        ];
+        
+        $this->assertTrue($objectToInsert1->save(false));
+        
+        $objectsFromFind = \test\data\Customer::findAll(['id' => [$id1]]);
+       
+        /* @var $objectFromFind data\Customer */
+        $this->assertEquals(1, count($objectsFromFind));
+        
+        $id2 = (int) \Faker\Provider\Base::randomNumber(5);
+        $objectToInsert2 = new \test\data\Customer();
+        $objectToInsert2->id = $id2;
+        $objectToInsert2->name = $faker->name;
+        $objectToInsert2->contacts = [
+            'telephone2' => 223456,
+            'telephone2' => 345678,
+            'telephone3' => 345678,
+        ];
+        $objectToInsert2->prices = [
+            2000000,
+            2000000,
+            2000000,
+            2000000
+        ];
+        $objectToInsert2->kids = [
+            'Alice',
+            'Billy',
+            'Charlie',
+        ];
+        
+        $this->assertTrue($objectToInsert2->save(false));
+        
+         $objectsFromFind2 = \test\data\Customer::findAll(['id' => [$id1, $id2]]);
+         
+         /* @var $objectFromFind data\Customer */
+        $this->assertEquals(2, count($objectsFromFind2));
+        
+        $this->assertTrue($objectsFromFind2[0]->id = $id1 || $objectsFromFind2[0]->id = $id2);
+    }
 }

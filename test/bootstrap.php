@@ -10,6 +10,7 @@ $_SERVER['SCRIPT_FILENAME'] = __FILE__;
 
 require dirname(__FILE__) . '/../vendor/autoload.php';
 require dirname(__FILE__) . '/../vendor/yiisoft/yii2/Yii.php';
+require dirname(__FILE__) . '/TestCase.php';
 
 Yii::setAlias('@test', __DIR__);
 
