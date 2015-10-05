@@ -65,16 +65,42 @@ class ActiveQuery extends Query implements ActiveQueryInterface {
     
     /**
      * @param Connection $db
-     * @return static
+     * @return ActiveRecord
      */
     public function one($db = null) {
         /* @var $response \Guzzle\Service\Resource\Model */
         $response = parent::one($db);
-        /* @var $object ActiveRecord */
-        $object = new $this->modelClass;
+        $value = $response->get('Item');
         $marshaller = new \Aws\DynamoDb\Marshaler();
-        $object->setAttributes($marshaller->unmarshalItem($response->get('Item')), false);
-        return $object;
+        return $this->createModel($value, $marshaller); 
+    }
+    
+    /**
+     * @param Connection $db
+     * @return ActiveRecord[]
+     */
+    public function all($db = null) {
+        $responses = parent::all($db);
+        $modelClass = $this->modelClass;
+        $marshaller = new \Aws\DynamoDb\Marshaler();
+        return array_map(function($value) use ($marshaller) {
+            return $this->createModel($value, $marshaller);
+        }, $responses[$modelClass::tableName()]);
+    }
+    
+    /**
+     * Create model base on return.
+     * @param type $value
+     * @param Aws\DynamoDb\Marshaler $marshaller
+     * @return \UrbanIndo\Yii2\DynamoDb\modelClass
+     */
+    private function createModel($value, \Aws\DynamoDb\Marshaler $marshaller = null) {
+        $model = new $this->modelClass;
+        if (!isset($marshaller)) {
+            $marshaller = new \Aws\DynamoDb\Marshaler();
+        }
+        $model->setAttributes($marshaller->unmarshalItem($value), false);
+        return $model;
     }
 
 //    public function asArray($value = true) {}

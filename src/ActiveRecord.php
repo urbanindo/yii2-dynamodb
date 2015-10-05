@@ -162,7 +162,7 @@ class ActiveRecord extends BaseActiveRecord {
      * Search for one object.
      * @param array $condition the condition for search.
      * @param array $options addition attribute.
-     * @return return static
+     * @return ActiveRecord
      */
     public static function findOne($condition, $options = null) {
         return self::createQueryWithParameter($options)->where($condition)->one();
@@ -172,13 +172,13 @@ class ActiveRecord extends BaseActiveRecord {
      * Search for all object that matches condition.
      * @param array $condition the condition for search.
      * @param array $options addition attribute.
-     * @return return static
+     * @return ActiveRecord[]
      */
     public static function findAll($condition, $options = null) {
         if ($options == null) {
             $options = ['using' => Query::TYPE_BATCH_GET];
         }
-        return self::createQueryWithParameter()->where($condition)->all();
+        return self::createQueryWithParameter($options)->where($condition)->all();
     }
     
     /**
