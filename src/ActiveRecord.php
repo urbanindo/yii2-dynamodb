@@ -115,13 +115,13 @@ class ActiveRecord extends BaseActiveRecord {
         }
         $values = $this->getDirtyAttributes($attributes);
 
-        $this->getDb()->createCommand()->insert($this->tableName(), $values);
+        $ret = $this->getDb()->createCommand()->insert($this->tableName(), $values);
 
         $changedAttributes = array_fill_keys(array_keys($values), null);
         $this->setOldAttributes($values);
         $this->afterSave(true, $changedAttributes);
         
-        return true;
+        return $ret;
     }
     /**
      * Returns the primary key **name(s)** for this AR class.
