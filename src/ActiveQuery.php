@@ -16,7 +16,6 @@ use yii\db\ActiveRelationTrait;
  * An ActiveQuery can be a normal query or be used in a relational context.
  *
  * ActiveQuery instances are usually created by [[ActiveRecord::find()]].
- * Relational queries are created by [[ActiveRecord::hasOne()]] and [[ActiveRecord::hasMany()]].
  *
  * Normal Query
  * ------------
@@ -42,6 +41,13 @@ class ActiveQuery extends Query implements ActiveQueryInterface
      * @event Event an event that is triggered when the query is initialized via [[init()]].
      */
     const EVENT_INIT = 'init';
+    
+    /**
+     * Whether to store response data in ActiveRecord model returned. This can be either boolean
+     * false if not to store response data or the key of the response to store.
+     * @var array|boolean
+     */
+    public $storeResponseData = ['ConsumedCapacity', 'LastEvaluatedKey', 'ScannedCount'];
 
     /**
      * Constructor.

@@ -45,6 +45,29 @@ class ActiveRecord extends BaseActiveRecord
      * @var array
      */
     protected static $_primaryKeys = [];
+    
+    /**
+     * Stores the response metadata either from retrieval operation such as
+     * <ul>
+     *  <li>`ConsumedCapacity` from GetItem, BatchGetItem, Query, and Scan</li>
+     *  <li>`UnprocessedKeys` from BatchGetItem</li>
+     *  <li>`Count`, `LastEvaluatedKey`, `ScannedCount` from Query or Scan</li>
+     * </ul>
+     * @var array
+     */
+    protected $_responseData = [];
+    
+    /**
+     * Stores the operation type that retrieves this model. Eligible values are.
+     * <ul>
+     *  <li>Query::USING_BATCH_GET_ITEM</li>
+     *  <li>Query::USING_GET_ITEM</li>
+     *  <li>Query::USING_QUERY</li>
+     *  <li>Query::USING_SCAN</li>
+     * </ul>
+     * @var string
+     */
+    protected $_findType;
 
     /**
      * Returns the database connection used by this AR class.
@@ -255,4 +278,29 @@ class ActiveRecord extends BaseActiveRecord
     {
         throw new \yii\base\NotSupportedException(__METHOD__ . ' is not supported.');
     }
+    
+    /**
+     * Populate active records from query response.
+     * @param ActiveQuery $query The query that produces the records.
+     * @param array $response    The operation response.
+     * @return static[]
+     */
+    public static function populateRecords(ActiveQuery $query, array $response)
+    {
+        $this->_findType = $query->using;
+    }
+    
+    /**
+     * Returns the response meta data from BatchGetItem, GetItem, Scan, or Query 
+     * operation. This can contains `ConsumedCapacity`, `UnprocessedKeys`, `Count`, 
+     * `LastEvaluatedKey`, `ScannedCount` depends on whether the query enables 
+     * storing the meta data.
+     * @return array
+     */
+    public function getResponseData()
+    {
+        return $this->_responseData;
+    }
+    
+    
 }

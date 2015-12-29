@@ -3,6 +3,7 @@
     <description>UrbanIndo Coding Standard</description>
     
     <exclude-pattern>*/tests/*</exclude-pattern>
+    <exclude-pattern>*/test/*</exclude-pattern>
     <exclude-pattern>*/data/*</exclude-pattern>
     <exclude-pattern>*/config/*</exclude-pattern>
     <exclude-pattern>*/views/*</exclude-pattern>
