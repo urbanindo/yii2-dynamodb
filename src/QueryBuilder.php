@@ -42,10 +42,144 @@ class QueryBuilder extends Object
      */
     public function build(Query $query)
     {
-        $query;
-        return [];
+        // Validate query
+        if (empty($query->from)) {
+            throw new \InvalidArgumentException('Table name not set');
+        }
+        if ($query->using == Query::USING_AUTO) {
+            if(!empty($query->where)) {
+                // TODO Choose either SCAN OR QUERY
+                $query->using = Query::USING_SCAN;
+            } else {
+                // TODO Look at keys
+                throw new \Exception('Unsupported query condition');
+            }
+        }
+
+        $call = 'build' . $query->using;
+
+        // Call builder
+        return $this->$call($query);
     }
-    
+
+    /**
+     * Generates DynamoDB Query from a [[Query]] object use GetItem method
+     * @param Query $query Object from which the query will be generated.
+     * @return array The generated DynamoDB command configuration.
+     */
+    public function buildGetItem(Query $query)
+    {
+        // TODO Check where condition. FYI, just support key => value_of_key, not attribute
+        return $this->getItem(
+            $query->from,
+            $query->where,
+            $this->buildOptions($query)
+        );
+    }
+
+    /**
+     * Generates DynamoDB Query from a [[Query]] object use BatchGetItem method
+     * @param Query $query Object from which the query will be generated.
+     * @return array The generated DynamoDB command configuration.
+     */
+    public function buildBatchGetItem(Query $query)
+    {
+        // TODO Check where condition. FYI, just support where 'IN' and
+        // key => value_of_key, not attribute
+        $new_where = [];
+        if (is_string($query->where) || is_numeric($query->where)) {
+            $new_where = [$query->where];
+        } else if (ArrayHelper::isIndexed($query->where)) {
+            $tmp_where = [];
+            if (ArrayHelper::isIndexed($query->where[0]))
+                $tmp_where = $query->where;
+            else
+                $tmp_where = [$query->where];
+
+            foreach ($tmp_where as $row) {
+                if(!ArrayHelper::isIndexed($row) and is_array($row)) {
+                    foreach ($row as $key => $value) {
+                        $new_where[$key] = $value;
+                    }
+                } else {
+                    if($row[0] != 'IN')
+                        throw new \Exception('Unsupported besides \'IN\' clause.');
+                    $new_where[$row[1]] = $row[2];
+                }
+            }
+        } else {
+            throw new \Exception('Unsupported besides \'IN\' clause or scalar version.');
+        }
+
+        return $this->batchGetItem(
+            $query->from,
+            $new_where,
+            [],
+            $this->buildOptions($query)
+        );
+    }
+
+    /**
+     * Generates DynamoDB Query from a [[Query]] object use Scan method
+     * @param Query $query Object from which the query will be generated.
+     * @return array The generated DynamoDB command configuration.
+     */
+    public function buildScan(Query $query)
+    {
+
+    }
+
+    /**
+     * Generates DynamoDB Query from a [[Query]] object use Query method
+     * @param Query $query Object from which the query will be generated.
+     * @return array The generated DynamoDB command configuration.
+     */
+    public function buildQuery(Query $query)
+    {
+
+    }
+
+    /**
+     * Generate projection or selection of attribute for DynamoDB query
+     * @param Query $query Object from which the query will be generated.
+     * @return array Array of projection options
+     */
+    public function buildProjection(Query $query)
+    {
+        $projection = [];
+        if(!empty($query->select)) {
+            if (is_array($query->select)) {
+                $projection['ProjectionExpression'] = implode(', ', $query->select);
+            } else {
+                $projection['ProjectionExpression'] = $query->select;
+            }
+        }
+
+        return $projection;
+    }
+
+    /**
+     * Generate options or addition information for DynamoDB query
+     * @param Query $query Object from which the query will be generated.
+     * @return array Another options which used in the query
+     */
+    public function buildOptions(Query $query)
+    {
+        $options = [];
+
+        if (empty($query->consistentRead)) {
+            $query->consistentRead = false;
+        }
+        $options['ConsistentRead'] = $query->consistentRead;
+
+        if (empty($query->returnConsumedCapacity)) {
+            $query->returnConsumedCapacity = false;
+        }
+        $options['ReturnConsumedCapacity'] = $query->returnConsumedCapacity;
+
+        return array_merge($options, $this->buildProjection($query));
+    }
+
     /**
      * Builds a DynamoDB command to create table.
      *
@@ -60,7 +194,7 @@ class QueryBuilder extends Object
         $argument = array_merge(['TableName' => $table], $options);
         return [$name, $argument];
     }
-    
+
     /**
      * Builds a DynamoDB command to describe table.
      *
@@ -74,7 +208,7 @@ class QueryBuilder extends Object
         $argument = ['TableName' => $table];
         return [$name, $argument];
     }
-    
+
     /**
      * Builds a DynamoDB command to delete table.
      *
@@ -108,7 +242,7 @@ class QueryBuilder extends Object
         ], $options);
         return [$name, $argument];
     }
-    
+
     /**
      * Builds a DynamoDB command to get item.
      *
@@ -124,10 +258,10 @@ class QueryBuilder extends Object
     public function getItem($table, $key, array $options = [])
     {
         $name = 'GetItem';
-        
+
         $tableDescription = $this->db->createCommand()->describeTable($table)->execute();
         $keySchema = $tableDescription['Table']['KeySchema'];
-        
+
         if (is_string($key) || is_numeric($key)) {
             $keyArgument = $this->buildGetItemScalarKey($keySchema, $key);
         } else {
@@ -141,7 +275,7 @@ class QueryBuilder extends Object
         );
         return [$name, $argument];
     }
-    
+
     /**
      * @param array $keySchema The schema of the key in the table.
      * @param mixed $key       The key either string or integer.
@@ -160,7 +294,7 @@ class QueryBuilder extends Object
             $keyName => $marshaler->marshalValue($key),
         ];
     }
-    
+
     /**
      * @param array $keySchema The schema of the key in the table.
      * @param array $keys      The key as indexed key or associative key.
@@ -169,7 +303,7 @@ class QueryBuilder extends Object
     public function buildGetItemCompositeKey(array $keySchema, array $keys)
     {
         $marshaler = new Marshaler();
-        
+
         $keyArgument = [];
         if (ArrayHelper::isIndexed($keys)) {
             foreach ($keys as $i => $value) {
@@ -182,7 +316,7 @@ class QueryBuilder extends Object
         }
         return $keyArgument;
     }
-    
+
     /**
      * Builds a DynamoDB command for batch get item.
      *
@@ -229,10 +363,10 @@ class QueryBuilder extends Object
     public function batchGetItem($table, array $keys, array $options = [], array $requestItemOptions = [])
     {
         $name = 'BatchGetItem';
-        
+
         $tableDescription = $this->db->createCommand()->describeTable($table)->execute();
         $keySchema = $tableDescription['Table']['KeySchema'];
-        
+
         if (ArrayHelper::isIndexed($keys)) {
             $isScalar = is_string($keys[0]) || is_numeric($keys[0]);
             if ($isScalar) {
@@ -245,17 +379,15 @@ class QueryBuilder extends Object
         } else {
             $keyArgument = $this->buildBatchGetItemFromAssociativeArray($keySchema, $keys);
         }
-        
-        $tableArgument = array_merge([
-            $table => [
-                    'Keys' => $keyArgument
-            ]
-        ], $requestItemOptions);
-        
+
+        $tableArgument = [
+            $table => array_merge(['Keys' => $keyArgument], $requestItemOptions)
+        ];
+
         $argument = array_merge(['RequestItems' => $tableArgument], $options);
         return [$name, $argument];
     }
-    
+
     /**
      * @param array $keySchema The KeySchema of the table.
      * @param array $keys      Indexed array of scalar element.
@@ -275,7 +407,7 @@ class QueryBuilder extends Object
             ];
         }, $keys);
     }
-    
+
     /**
      * @param array $keySchema The KeySchema of the table.
      * @param array $keys      Indexed array of indexed array.
@@ -293,7 +425,7 @@ class QueryBuilder extends Object
             return $return;
         }, $keys);
     }
-    
+
     /**
      * @param array $keySchema The KeySchema of the table.
      * @param array $keys      Indexed array of associative array.
@@ -312,7 +444,7 @@ class QueryBuilder extends Object
             return $return;
         }, $keys);
     }
-    
+
     /**
      * @param array $keySchema The KeySchema of the table.
      * @param array $keys      Associative array of indexed scalar.
