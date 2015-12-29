@@ -64,7 +64,8 @@ class Command extends Object
      * @param array  $argument The command argument.
      * @return static
      */
-    public function setCommand($name, array $argument) {
+    public function setCommand($name, array $argument)
+    {
         $this->name = $name;
         $this->argument = $argument;
         return $this;
@@ -72,8 +73,8 @@ class Command extends Object
 
     /**
      * Create new table.
-     * @param string $table the name of the table.
-     * @param array $options valid options for `CreateTable` command.
+     * @param string $table   The name of the table.
+     * @param array  $options Valid options for `CreateTable` command.
      * @return static
      */
     public function createTable($table, array $options)
@@ -84,7 +85,7 @@ class Command extends Object
     
     /**
      * Delete an existing table.
-     * @param string $table the name of the table.
+     * @param string $table The name of the table.
      * @return static
      */
     public function deleteTable($table)
@@ -95,7 +96,7 @@ class Command extends Object
     
     /**
      * Describe a table.
-     * @param string $table the name of the table.
+     * @param string $table The name of the table.
      * @return static
      */
     public function describeTable($table)
@@ -133,60 +134,32 @@ class Command extends Object
     }
     
     /**
-     * Put a single item in the table.
+     * Get a single item from table.
      * @param string $table   The name of the table.
-     * @param mixed  $key     The values to input.
+     * @param mixed  $key     The key of the row.
      * @param array  $options Additional options to the request argument.
      * @return static
      */
-    public function getItem($table, $key, $options = [])
+    public function getItem($table, $key, array $options = [])
     {
         list($name, $argument) = $this->db->getQueryBuilder()->getItem($table, $key, $options);
         return $this->setCommand($name, $argument);
     }
     
     /**
-     * @param string $tableName
-     * @param array $values
+     * Get multiple items from table using keys.
+     *
+     * @param string $table   The name of the table.
+     * @param array  $keys    The keys of the row. This can be indexed array of
+     * scalar value, indexed array of array of scalar value, indexed array of
+     * associative array.
+     * @param array  $options Additional options to the request argument.
+     * @return static
+     * @see QueryBuilder::batchGetItem
      */
-    public function insert($tableName, $values)
+    public function batchGetItem($table, array $keys, array $options = [])
     {
-        return $this->putItem($tableName, $values);
+        list($name, $argument) = $this->db->getQueryBuilder()->batchGetItem($table, $keys, $options);
+        return $this->setCommand($name, $argument);
     }
-    
-    /**
-     * Increase can be done unlimited time, decrease max 4 times a day
-     * @param string $tablename
-     * @param int $readThroughput
-     * @param int $writeThroughput
-     * @return array @see http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_TableDescription.html
-     */
-    public function updateThroughput($tablename, $readThroughput,
-            $writeThroughput)
-    {
-        $request = [
-            'TableName' => $tablename,
-            'ProvisionedThroughput' => [
-                'ReadCapacityUnits' => $readThroughput,
-                'WriteCapacityUnits' => $writeThroughput
-            ]
-        ];
-        $command = $this->getClient()->getCommand('UpdateTable', $request);
-        return $this->getClient()->execute($command);
-    }
-
-    /**
-     * Executes the query and returns the first item of the result.
-     * @return array The items that are already marshaled.
-     */
-    public function queryOne()
-    {
-        $response = $this->execute();
-        if ($this->name == 'GetItem') {
-            $marshaller = new Marshaler();
-            return $marshaller->unmarshalItem($response['Item']);
-        }
-        return $response;
-    }
-
 }
