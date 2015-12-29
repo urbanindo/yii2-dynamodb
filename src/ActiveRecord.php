@@ -14,13 +14,13 @@ use yii\helpers\StringHelper;
 
 /**
  * ActiveRecord is the base class for classes representing relational data in terms of objects.
- * 
+ *
  * Active Record implements the [Active Record design pattern](http://en.wikipedia.org/wiki/Active_record) for
  * [DynamoDB] (https://aws.amazon.com/dynamodb/).
- * 
+ *
  * For defining a record a subclass should at least implement the [[attributes()]] method to define
  * attributes and the [[tableName()]] methods to define the table name that the class represents.
- * 
+ *
  * The following is an example model called `Customer`:
  *
  * ```php
@@ -30,16 +30,17 @@ use yii\helpers\StringHelper;
  *     {
  *         return ['id', 'name', 'address', 'registration_date'];
  *     }
- * 
+ *
  *     public static function tableName() {
  *         return 'Customers';
  *     }
  * }
  * ```
- * 
+ *
  * @author Petra Barus <petra.barus@gmail.com>
  */
-class ActiveRecord extends BaseActiveRecord {
+class ActiveRecord extends BaseActiveRecord
+{
     
     protected static $_primaryKeys = [];
     
@@ -49,7 +50,8 @@ class ActiveRecord extends BaseActiveRecord {
      * You may override this method if you want to use a different database connection.
      * @return Connection the database connection used by this AR class.
      */
-    public static function getDb() {
+    public static function getDb()
+    {
         return Yii::$app->get('dynamodb');
     }
 
@@ -58,7 +60,8 @@ class ActiveRecord extends BaseActiveRecord {
      * By default this method returns the class name as the table name by calling [[Inflector::camel2id()]].
      * @return string the table name
      */
-    public static function tableName() {
+    public static function tableName()
+    {
         return Inflector::camel2id(StringHelper::basename(get_called_class()), '_');
     }
 
@@ -66,7 +69,8 @@ class ActiveRecord extends BaseActiveRecord {
      * @inheritdoc
      * @return ActiveQuery the newly created [[ActiveQuery]] instance.
      */
-    public static function find() {
+    public static function find()
+    {
         return Yii::createObject(ActiveQuery::className(), [get_called_class()]);
     }
 
@@ -105,7 +109,8 @@ class ActiveRecord extends BaseActiveRecord {
      *
      * @return boolean whether the attributes are valid and the record is inserted successfully.
      */
-    public function insert($runValidation = true, $attributes = null) {
+    public function insert($runValidation = true, $attributes = null)
+    {
         if ($runValidation && !$this->validate($attributes)) {
             Yii::info('Model not inserted due to validation error.', __METHOD__);
             return false;
@@ -123,20 +128,22 @@ class ActiveRecord extends BaseActiveRecord {
         
         return $ret;
     }
+
     /**
      * Returns the primary key **name(s)** for this AR class.
      *
      * Note that an array should be returned even when the record only has a single primary key.
      *
      * For the primary key **value** see [[getPrimaryKey()]] instead.
-     * 
+     *
      * The array returned will consist of either one or two string. The first one
      * will be the name of the HASH key. The second one will be the name of the RANGE
      * key if exists.
      *
      * @return string[] the primary key name(s) for this AR class.
      */
-    public static function primaryKey() {
+    public static function primaryKey()
+    {
         if (!isset(self::$_primaryKeys[get_called_class()])) {
             $client = self::getDb()->getClient();
             $command = $client->getCommand('DescribeTable', [
@@ -154,7 +161,8 @@ class ActiveRecord extends BaseActiveRecord {
         return self::$_primaryKeys[get_called_class()];
     }
     
-    public static function batchInsert($values){
+    public static function batchInsert($values)
+    {
         self::getDb()->createCommand()->putItems(static::tableName(), $values);
     }
     
@@ -164,7 +172,8 @@ class ActiveRecord extends BaseActiveRecord {
      * @param array $options addition attribute.
      * @return ActiveRecord
      */
-    public static function findOne($condition, $options = null) {
+    public static function findOne($condition, $options = null)
+    {
         return self::createQueryWithParameter($options)->where($condition)->one();
     }
     
@@ -174,7 +183,8 @@ class ActiveRecord extends BaseActiveRecord {
      * @param array $options addition attribute.
      * @return ActiveRecord[]
      */
-    public static function findAll($condition, $options = null) {
+    public static function findAll($condition, $options = null)
+    {
         if ($options == null) {
             $options = ['using' => Query::TYPE_BATCH_GET];
         }
@@ -186,10 +196,11 @@ class ActiveRecord extends BaseActiveRecord {
      * @param array $options
      * @return ActiveQuery the query.
      */
-    private static function createQueryWithParameter($options = null) {
+    private static function createQueryWithParameter($options = null)
+    {
         $query = self::find();
         if ($options !== null) {
-            foreach($options as $attribute => $value) {
+            foreach ($options as $attribute => $value) {
                 $query->{$attribute} = $value;
             }
         }
@@ -200,7 +211,8 @@ class ActiveRecord extends BaseActiveRecord {
      * @inheritdoc
      * @todo
      */
-    public static function updateAll($attributes, $condition = '') {
+    public static function updateAll($attributes, $condition = '')
+    {
         parent::updateAll($attributes, $condition);
     }
     
@@ -208,7 +220,8 @@ class ActiveRecord extends BaseActiveRecord {
      * @inheritdoc
      * @todo
      */
-    public static function updateAllCounters($counters, $condition = '') {
+    public static function updateAllCounters($counters, $condition = '')
+    {
         parent::updateAllCounters($counters, $condition);
     }
     
@@ -216,8 +229,8 @@ class ActiveRecord extends BaseActiveRecord {
      * @inheritdoc
      * @todo
      */
-    public static function deleteAll($condition = '', $params = []) {
+    public static function deleteAll($condition = '', $params = [])
+    {
         parent::deleteAll($condition, $params);
     }
-    
 }

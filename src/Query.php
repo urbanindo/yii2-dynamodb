@@ -1,8 +1,8 @@
 <?php
-
 /**
  * @author Petra Barus <petra.barus@gmail.com>
  */
+
 namespace UrbanIndo\Yii2\DynamoDb;
 
 use Yii;
@@ -18,13 +18,13 @@ use yii\base\NotSupportedException;
  */
 class Query extends Component implements QueryInterface
 {
+
     use QueryTrait;
-    
+
     const TYPE_BATCH_GET = 'BatchGetItem';
     const TYPE_GET = 'GetItem';
     const TYPE_QUERY = 'Query';
     const TYPE_SCAN = 'Scan';
-
 
     /**
      * Array of attributes being selected. It will be used to build Projection Expression.
@@ -43,36 +43,36 @@ class Query extends Component implements QueryInterface
      * For example, `[':name' => 'Dan', ':age' => 31]`.
      */
     public $expressionAttributesNames = [];
-    
+
     /**
      * 
      */
     public $expressionAttributesValues = [];
-    
+
     /**
      *
      * @var type 
      */
     public $consistentRead;
-    
+
     /**
      *
      * @var type 
      */
     public $returnConsumedCapacity;
-    
+
     /**
      *
      * @var type 
      */
     public $from;
-    
+
     /**
      *
      * @var type 
      */
     public $keys = [];
-    
+
     /**
      * Executes the query and returns all results as an array.
      * @param Connection $db the database connection used to execute the query.
@@ -88,7 +88,7 @@ class Query extends Component implements QueryInterface
 
         return $db->createCommand($config);
     }
-    
+
     /**
      * Identifies one or more attributes to retrieve from the table. 
      * These attributes can include scalars, sets, or elements of a JSON document. 
@@ -100,7 +100,8 @@ class Query extends Component implements QueryInterface
     public function select($attributes, $expression = [])
     {
         if (!is_array($attributes)) {
-            $attributes = preg_split('/\s*,\s*/', trim($attributes), -1, PREG_SPLIT_NO_EMPTY);
+            $attributes = preg_split('/\s*,\s*/', trim($attributes), -1,
+                    PREG_SPLIT_NO_EMPTY);
         }
         if (empty($this->select)) {
             $this->select = $attributes;
@@ -112,11 +113,12 @@ class Query extends Component implements QueryInterface
                 $this->withExpressionAttributesName($exp, $alias);
             }
         }
-        
+
         return $this;
     }
 
-    public function from($tableName) {
+    public function from($tableName)
+    {
         $this->from = $tableName;
     }
 
@@ -139,7 +141,8 @@ class Query extends Component implements QueryInterface
      * Whether to use consistent read in the query.
      * @return static
      */
-    public function withConsistentRead() {
+    public function withConsistentRead()
+    {
         $this->consistentRead = true;
         return $this;
     }
@@ -148,25 +151,28 @@ class Query extends Component implements QueryInterface
      * Whether to not use consistent read in the query.
      * @return static
      */
-    public function withoutConsistentRead() {
+    public function withoutConsistentRead()
+    {
         $this->consistentRead = false;
         return $this;
     }
-    
+
     /**
      * Whether to return the consumed capacity.
      * @return static
      */
-    public function withConsumedCapacity() {
+    public function withConsumedCapacity()
+    {
         $this->returnConsumedCapacity = true;
         return $this;
     }
-    
+
     /**
      * Whether not to return the consumed capacity.
      * @return static
      */
-    public function withoutConsumedCapacity() {
+    public function withoutConsumedCapacity()
+    {
         $this->returnConsumedCapacity = false;
         return $this;
     }
@@ -176,20 +182,24 @@ class Query extends Component implements QueryInterface
      * @param Connection $db the dynamodb connection.
      * @return
      */
-    public function all($db = null) {
+    public function all($db = null)
+    {
         return $this->createCommand($db)->queryAll();
     }
 
-    public function count($q = '*', $db = null) {
+    public function count($q = '*', $db = null)
+    {
         // TODO: only if query and scan operations.
         // batch get assumes results equal to number of id and hash
     }
-    
-    public function exists($db = null) {
+
+    public function exists($db = null)
+    {
         return !empty($this->createCommand($db)->queryOne());
     }
 
-    public function one($db = null) {
+    public function one($db = null)
+    {
         $this->using = self::TYPE_GET;
         return $this->createCommand($db)->queryOne();
     }
@@ -203,4 +213,5 @@ class Query extends Component implements QueryInterface
     {
         // todo
     }
+
 }

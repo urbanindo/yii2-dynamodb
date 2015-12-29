@@ -34,7 +34,7 @@
             <arg value="${dynamodb.pid}"/>
         </exec>
     </target>
-    <target name="test">
+    <target name="test" depends="phpcs">
         <antcall target="start-server"></antcall>
         <echo>Running phpunit</echo>
         <trycatch>
@@ -48,6 +48,12 @@
                 </antcall>
             </finally>
         </trycatch>
+    </target>
+    <target name="phpcs">
+        <exec executable="${basedir}/vendor/bin/phpcs" failonerror="true">
+            <arg value="--standard=${basedir}/vendor/yiisoft/yii2-coding-standards/Yii2/ruleset.xml"/>
+            <arg value="src"/>
+        </exec>
     </target>
     <target name="prepare">
         <mkdir dir="${basedir}/dynamodb"/>

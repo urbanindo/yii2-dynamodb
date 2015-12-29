@@ -3,6 +3,7 @@
  * Connection class file.
  * @author Petra Barus <petra.barus@gmail.com>
  */
+
 namespace UrbanIndo\Yii2\DynamoDb;
 
 use Yii;
@@ -10,15 +11,16 @@ use Aws\DynamoDb\DynamoDbClient;
 
 /**
  * Connection wraps DynamoDB connection for Aws PHP SDK.
- * 
+ *
  * To use the connection puts this in the config.
- * 
+ *
  * ```
  * ```
- * 
+ *
  * @author Petra Barus <petra.barus@gmail.com>
  */
-class Connection extends \yii\base\Component {
+class Connection extends \yii\base\Component
+{
     
     /**
      * @var array the configuration for DynamoDB client.
@@ -30,10 +32,12 @@ class Connection extends \yii\base\Component {
      */
     protected $_client;
     protected $_builder;
+    
     /**
      * Initialize the dynamodb client.
      */
-    public function init() {
+    public function init()
+    {
         parent::init();
         //For v2 compatibility.
         //TODO: remove deprecated.
@@ -43,7 +47,8 @@ class Connection extends \yii\base\Component {
     /**
      * @return DynamoDbClient
      */
-    public function getClient() {
+    public function getClient()
+    {
         return $this->_client;
     }
     
@@ -52,19 +57,20 @@ class Connection extends \yii\base\Component {
      * @param array $config the configuration for the Command class
      * @return Command the DB command
      */
-    public function createCommand($config = []) {
+    public function createCommand($config = [])
+    {
         $command = Yii::createObject(array_merge($config, [
-            'class' => 'UrbanIndo\Yii2\DynamoDb\Command',
+            'class' => Command::className(),
             'db' => $this
         ]));
         return $command;
     }
 
     /**
-     * 
      * @return QueryBuilder
      */
-    public function getQueryBuilder() {
+    public function getQueryBuilder()
+    {
         if ($this->_builder === null) {
             $this->_builder = new QueryBuilder($this);
         }

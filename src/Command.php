@@ -13,7 +13,8 @@ use yii\base\Object;
 /**
  * @author Petra Barus <petra.barus@gmail.com>
  */
-class Command extends Object {
+class Command extends Object
+{
     
     /**
      * @var Connection
@@ -22,8 +23,12 @@ class Command extends Object {
     public $method;
     public $request;
 
+    /**
+     * Initializes the object.
+     */
     public function init() {
     }
+    
     /**
      * @return DynamoDbClient
      */
