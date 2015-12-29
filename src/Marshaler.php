@@ -1,33 +1,42 @@
 <?php
-
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+/**
+ * Marshaller class file.
+ * @author Muhammad Adinata <mail.dieend@gmail.com>
  */
 
 namespace UrbanIndo\Yii2\DynamoDb;
 
 /**
- * Description of Marshaller
- *
- * @author adinata
+ * Marshaller wraps AWS DynamoDB Marshaller.
+ * @author Muhammad Adinata <mail.dieend@gmail.com>
  */
-class Marshaler {
-    /* @var $singleton Marshaler */
-    private static $singleton = null;
-    
+class Marshaler
+{
+
     /**
-     * 
+     * @var static
+     */
+    private static $singleton = null;
+
+    /**
+     * Singleton method.
      * @return Marshaler
      */
-    private static function marshaler() {
+    private static function marshaler()
+    {
         if (self::$singleton == null) {
             self::$singleton = new \Aws\DynamoDb\Marshaler();
         }
         return self::$singleton;
     }
-    public static function marshal($item) {
+
+    /**
+     * Marshal object either Yii2 model or basic PHP native array.
+     * @param mixed $item Item to be marshalled.
+     * @return mixed
+     */
+    public static function marshal($item)
+    {
         if ($item instanceof \yii\base\Model) {
             $val = self::marshalModel($item);
         } else {
@@ -35,22 +44,86 @@ class Marshaler {
         }
         return $val;
     }
-    public static function marshalItem($item) {
+
+    /**
+     * Marshal a native PHP array of data to a new array that is formatted in
+     * the proper parameter structure required by DynamoDB operations.
+     *
+     * @param array|\stdClass $item An associative array of data.
+     *
+     * @return array
+     */
+    public static function marshalItem($item)
+    {
         return self::marshaler()->marshalItem($item);
     }
-    public static function marshalModel(\yii\base\Model $item) {
+
+    /**
+     * Marshal a Yii2 model object to a new array that is formatted in
+     * the proper parameter structure required by DynamoDB operations.
+     *
+     * @param \yii\base\Model $item The model to be marshalled.
+     * @return mixed
+     */
+    public static function marshalModel(\yii\base\Model $item)
+    {
         return self::marshaler()->marshalItem($item->getAttributes());
     }
-    public static function marshalJson($json) {
+
+    /**
+     * Marshal a JSON document from a string to an array that is formatted in
+     * the proper parameter structure required by DynamoDB operations.
+     *
+     * @param string $json A valid JSON document.
+     * @return array
+     * @throws \InvalidArgumentException If the JSON is invalid.
+     */
+    public static function marshalJson($json)
+    {
         return self::marshaler()->marshalJson($json);
     }
-    public static function marshalValue($value) {
+
+    /**
+     * Marshal a native PHP value into an array that is formatted in the proper
+     * parameter structure required by DynamoDB operations.
+     *
+     * @param mixed $value A scalar, array, or stdClass value.
+     *
+     * @return array Formatted like `(TYPE => VALUE)`.
+     * @throws \UnexpectedValueException If the value cannot be marshaled.
+     */
+    public static function marshalValue($value)
+    {
         return self::marshaler()->marshalValue($value);
     }
-    public static function unmarshalItem(array $data) {
+
+    /**
+     * Unmarshal an item from a DynamoDB operation result into a native PHP
+     * array. If you set $mapAsObject to true, then a stdClass value will be
+     * returned instead.
+     *
+     * @param array $data Item from a DynamoDB result.
+     *
+     * @return array|\stdClass
+     */
+    public static function unmarshalItem(array $data)
+    {
         return self::marshaler()->unmarshalItem($data);
     }
-    public static function unmarshalModel(array $data, $class) {
+
+    /**
+     * Unmarshal a value from a DynamoDB operation result into a native Yii2 mode.
+     * Will return a scalar, array, or (if you set $mapAsObject to true)
+     * stdClass value.
+     *
+     * @param array  $data  Value from a DynamoDB result.
+     * @param string $class The name of the class.
+     *
+     * @return \yii\base\Model
+     * @throws \InvalidArgumentException If the class is not type of \yii\base\Model.
+     */
+    public static function unmarshalModel(array $data, $class)
+    {
         $object = new $class();
         if (!($object instanceof \yii\base\Model)) {
             throw new \InvalidArgumentException("Class to unmarshal must an instance of \yii\base\Model");
@@ -58,11 +131,30 @@ class Marshaler {
         $object->setAttributes(self::marshaler()->unmarshalItem($data));
         return $object;
     }
-    public static function unmarshalJson($json) {
+
+    /**
+     * Unmarshal a document (item) from a DynamoDB operation result into a JSON
+     * document string.
+     *
+     * @param array $json Item/document from a DynamoDB result.
+     * @return string
+     */
+    public static function unmarshalJson(array $json)
+    {
         return self::marshaler()->unmarshalJson($json);
     }
-    public static function unmarshalValue($value) {
+
+    /**
+     * Unmarshal a value from a DynamoDB operation result into a native PHP
+     * value. Will return a scalar, array, or (if you set $mapAsObject to true)
+     * stdClass value.
+     *
+     * @param mixed $value Value from a DynamoDB result.
+     *
+     * @return mixed
+     */
+    public static function unmarshalValue($value)
+    {
         return self::marshaler()->unmarshalValue($value);
     }
-    
 }
