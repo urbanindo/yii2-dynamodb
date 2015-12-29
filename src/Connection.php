@@ -12,29 +12,33 @@ use Aws\DynamoDb\DynamoDbClient;
 /**
  * Connection wraps DynamoDB connection for Aws PHP SDK.
  *
- * To use the connection puts this in the config.
- *
- * ```
- * ```
- *
  * @author Petra Barus <petra.barus@gmail.com>
+ * @see DynamoDbClient
  */
 class Connection extends \yii\base\Component
 {
-    
+
     /**
-     * @var array the configuration for DynamoDB client.
+     * The configuration for DynamoDB client.
+     * @var array
      */
     public $config;
-    
+
     /**
-     * @var DynamoDbClient the DynamoDB client.
+     * The DynamoDB client.
+     * @var DynamoDbClient
      */
     protected $_client;
-    protected $_builder;
     
     /**
-     * Initialize the dynamodb client.
+     * The query builder.
+     * @var QueryBuilder
+     */
+    protected $_builder;
+
+    /**
+     * Initialize the DynamoDB client.
+     * @return void
      */
     public function init()
     {
@@ -43,7 +47,7 @@ class Connection extends \yii\base\Component
         //TODO: remove deprecated.
         $this->_client = DynamoDbClient::factory($this->config);
     }
-    
+
     /**
      * @return DynamoDbClient
      */
@@ -51,13 +55,13 @@ class Connection extends \yii\base\Component
     {
         return $this->_client;
     }
-    
+
     /**
      * Creates a command for execution.
-     * @param array $config the configuration for the Command class
+     * @param array $config The configuration for the Command class.
      * @return Command the DB command
      */
-    public function createCommand($config = [])
+    public function createCommand(array $config = [])
     {
         $command = Yii::createObject(array_merge($config, [
             'class' => Command::className(),
@@ -67,6 +71,7 @@ class Connection extends \yii\base\Component
     }
 
     /**
+     * Returns the query builder for this connection.
      * @return QueryBuilder
      */
     public function getQueryBuilder()
@@ -75,6 +80,5 @@ class Connection extends \yii\base\Component
             $this->_builder = new QueryBuilder($this);
         }
         return $this->_builder;
-
     }
 }

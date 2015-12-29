@@ -34,7 +34,7 @@
             <arg value="${dynamodb.pid}"/>
         </exec>
     </target>
-    <target name="test" depends="phpcs">
+    <target name="test">
         <antcall target="start-server"></antcall>
         <echo>Running phpunit</echo>
         <trycatch>

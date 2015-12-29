@@ -8,11 +8,11 @@ namespace UrbanIndo\Yii2\DynamoDb;
 
 /**
  * Marshaller wraps AWS DynamoDB Marshaller.
- *
- * @author adinata
+ * @author Muhammad Adinata <mail.dieend@gmail.com>
  */
 class Marshaler
 {
+
     /**
      * @var static
      */
@@ -62,7 +62,7 @@ class Marshaler
      * Marshal a Yii2 model object to a new array that is formatted in
      * the proper parameter structure required by DynamoDB operations.
      *
-     * @param \yii\base\Model $item
+     * @param \yii\base\Model $item The model to be marshalled.
      * @return mixed
      */
     public static function marshalModel(\yii\base\Model $item)
@@ -76,7 +76,7 @@ class Marshaler
      *
      * @param string $json A valid JSON document.
      * @return array
-     * @throws \InvalidArgumentException if the JSON is invalid.
+     * @throws \InvalidArgumentException If the JSON is invalid.
      */
     public static function marshalJson($json)
     {
@@ -89,8 +89,8 @@ class Marshaler
      *
      * @param mixed $value A scalar, array, or stdClass value.
      *
-     * @return array Formatted like `array(TYPE => VALUE)`.
-     * @throws \UnexpectedValueException if the value cannot be marshaled.
+     * @return array Formatted like `(TYPE => VALUE)`.
+     * @throws \UnexpectedValueException If the value cannot be marshaled.
      */
     public static function marshalValue($value)
     {
@@ -120,7 +120,7 @@ class Marshaler
      * @param string $class The name of the class.
      *
      * @return \yii\base\Model
-     * @throws \UnexpectedValueException
+     * @throws \InvalidArgumentException If the class is not type of \yii\base\Model.
      */
     public static function unmarshalModel(array $data, $class)
     {
@@ -136,12 +136,10 @@ class Marshaler
      * Unmarshal a document (item) from a DynamoDB operation result into a JSON
      * document string.
      *
-     * @param array $data            Item/document from a DynamoDB result.
-     * @param int   $jsonEncodeFlags Flags to use with `json_encode()`.
-     *
+     * @param array $json Item/document from a DynamoDB result.
      * @return string
      */
-    public static function unmarshalJson($json)
+    public static function unmarshalJson(array $json)
     {
         return self::marshaler()->unmarshalJson($json);
     }
@@ -151,11 +149,9 @@ class Marshaler
      * value. Will return a scalar, array, or (if you set $mapAsObject to true)
      * stdClass value.
      *
-     * @param array $value       Value from a DynamoDB result.
-     * @param bool  $mapAsObject Whether maps should be represented as stdClass.
+     * @param mixed $value Value from a DynamoDB result.
      *
      * @return mixed
-     * @throws \UnexpectedValueException
      */
     public static function unmarshalValue($value)
     {

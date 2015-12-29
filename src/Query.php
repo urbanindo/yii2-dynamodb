@@ -1,5 +1,6 @@
 <?php
 /**
+ * Query class file.
  * @author Petra Barus <petra.barus@gmail.com>
  */
 
@@ -12,7 +13,7 @@ use yii\db\QueryTrait;
 use yii\base\NotSupportedException;
 
 /**
- * Description of Query
+ * Query represents item fetching operation from DynamoDB table.
  *
  * @author Petra Barus <petra.barus@gmail.com>
  */
@@ -21,10 +22,34 @@ class Query extends Component implements QueryInterface
 
     use QueryTrait;
 
-    const TYPE_BATCH_GET = 'BatchGetItem';
-    const TYPE_GET = 'GetItem';
-    const TYPE_QUERY = 'Query';
-    const TYPE_SCAN = 'Scan';
+    /**
+     * If the query is BatchGetItem operation, meaning the query is for multiple item using keys.
+     * @link http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchGetItem.html
+     */
+    const USING_BATCH_GET_ITEM = 'BatchGetItem';
+    
+    /**
+     * If the query is GetItem operation, meaning the query is for a single item using the key.
+     * @link http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_GetItem.html
+     */
+    const USING_GET_ITEM = 'GetItem';
+    
+    /**
+     * If the query is Query operation, meaning it uses primary key or secondary key from the table.
+     * @link http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Query.html
+     */
+    const USING_QUERY = 'Query';
+    
+    /**
+     * If the query is Scan operation, meaning it will access every item in the table.
+     * @link http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Query.html
+     */
+    const USING_SCAN = 'Scan';
+    
+    /**
+     * This will try to detect the auto.
+     */
+    const USING_AUTO = 'Auto';
 
     /**
      * Array of attributes being selected. It will be used to build Projection Expression.
@@ -33,53 +58,37 @@ class Query extends Component implements QueryInterface
     public $select = [];
 
     /**
-     * @var string Type of query that will be executed, 'Get', 'BatchGet', 'Query', or 'Scan'. Defaults to 'BatchGet'
+     * Type of query that will be executed, 'Get', 'BatchGet', 'Query', or 'Scan'. Defaults to 'BatchGet'.
+     * @var string
      * @see from()
      */
-    public $using = self::TYPE_SCAN;
-
+    public $using = self::USING_AUTO;
+    
     /**
-     * @var array list of query parameter values indexed by parameter placeholders.
-     * For example, `[':name' => 'Dan', ':age' => 31]`.
-     */
-    public $expressionAttributesNames = [];
-
-    /**
-     * 
-     */
-    public $expressionAttributesValues = [];
-
-    /**
-     *
-     * @var type 
+     * Whether to use consistent read or not.
+     * @var boolean
      */
     public $consistentRead;
 
     /**
-     *
-     * @var type 
+     * Whether to return consumed capacity or not.
+     * @var boolean
      */
     public $returnConsumedCapacity;
 
     /**
-     *
-     * @var type 
+     * The table to query on.
+     * @var string
      */
     public $from;
 
     /**
-     *
-     * @var type 
-     */
-    public $keys = [];
-
-    /**
      * Executes the query and returns all results as an array.
-     * @param Connection $db the database connection used to execute the query.
+     * @param Connection $db The database connection used to execute the query.
      * If this parameter is not given, the `dynamodb` application component will be used.
      * @return Command
      */
-    public function createCommand($db = null)
+    public function createCommand(Connection $db = null)
     {
         if ($db === null) {
             $db = Yii::$app->get('dynamodb');
@@ -90,18 +99,27 @@ class Query extends Component implements QueryInterface
     }
 
     /**
-     * Identifies one or more attributes to retrieve from the table. 
-     * These attributes can include scalars, sets, or elements of a JSON document. 
-     * 
-     * @param string|array $attributes the attributes to be selected. Attributes can be specified in either a string separated with comma (e.g. "id, name") or an array (e.g. ['id', 'name']). see http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.AccessingItemAttributes.html
-     * @param array $expression expression attributes name. see http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/ExpressionPlaceholders.html#ExpressionAttributeNames (e.g. [''MyKey' => '#mk']
-     * @return Query
+     * Identifies one or more attributes to retrieve from the table.
+     * These attributes can include scalars, sets, or elements of a JSON document.
+     *
+     * @param string|array $attributes The attributes to be selected.
+     * Attributes can be specified in either a string separated with comma (e.g. "id, name")
+     * or an array (e.g. ['id', 'name']).
+     * See http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.AccessingItemAttributes.html .
+     * @param array        $expression Expression attributes name.
+     * See http://amzn.to/1JFZP1n
+     * (e.g. [''MyKey' => '#mk'].
+     * @return static
      */
-    public function select($attributes, $expression = [])
+    public function select($attributes, array $expression = [])
     {
         if (!is_array($attributes)) {
-            $attributes = preg_split('/\s*,\s*/', trim($attributes), -1,
-                    PREG_SPLIT_NO_EMPTY);
+            $attributes = preg_split(
+                '/\s*,\s*/',
+                trim($attributes),
+                -1,
+                PREG_SPLIT_NO_EMPTY
+            );
         }
         if (empty($this->select)) {
             $this->select = $attributes;
@@ -117,23 +135,14 @@ class Query extends Component implements QueryInterface
         return $this;
     }
 
-    public function from($tableName)
+    /**
+     * Sets the table name for the query.
+     * @param string|array $table The table(s) to be selected from.
+     * @return static the query object itself.
+     */
+    public function from($table)
     {
-        $this->from = $tableName;
-    }
-
-    public function using($queryType)
-    {
-        if (!in_array($queryType, [self::TYPE_BATCH_GET, self::TYPE_GET])) {
-            throw new NotSupportedException('only batch get and get that is currently supported');
-        }
-        $this->using = $queryType;
-        return $this;
-    }
-
-    public function withExpressionAttributesName($attributes, $alias)
-    {
-        $this->expressionAttributesNames[$attributes] = $alias;
+        $this->from = $table;
         return $this;
     }
 
@@ -179,39 +188,40 @@ class Query extends Component implements QueryInterface
 
     /**
      * Returns all object that matches the query.
-     * @param Connection $db the dynamodb connection.
-     * @return
+     * @param Connection $db The dynamodb connection.
+     * @return array
      */
-    public function all($db = null)
+    public function all(Connection $db = null)
     {
         return $this->createCommand($db)->queryAll();
     }
 
-    public function count($q = '*', $db = null)
+    /**
+     * Returns one object that matches the query.
+     * @param Connection $db The dynamodb connection.
+     * @return array
+     */
+    public function one(Connection $db = null)
     {
-        // TODO: only if query and scan operations.
-        // batch get assumes results equal to number of id and hash
-    }
-
-    public function exists($db = null)
-    {
-        return !empty($this->createCommand($db)->queryOne());
-    }
-
-    public function one($db = null)
-    {
-        $this->using = self::TYPE_GET;
+        $this->using = self::USING_GET_ITEM;
         return $this->createCommand($db)->queryOne();
     }
 
     /**
-     * Starts a batch query. Doesn't necessarily have $batchSize size. 
-     * Will call one requests for each batch instead of calling until empty like all.
-     *
+     * Returns the number of records.
+     * @param string $q the COUNT expression. This parameter is ignored by this implementation.
+     * @param Connection $db the database connection used to execute the query.
+     * If this parameter is not given, the `elasticsearch` application component will be used.
+     * @return integer number of records
      */
-    public function batch($batchSize = 100, $db = null)
+    public function count($q = '*', Connection $db = null)
     {
-        // todo
+        
+    }
+
+    public function exists($db = null)
+    {
+        
     }
 
 }

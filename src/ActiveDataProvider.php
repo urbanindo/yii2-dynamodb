@@ -1,7 +1,9 @@
 <?php
 /**
+ * ActiveDataProvider class file.
  * @author Petra Barus <petra.barus@gmail.com>
  */
+
 namespace UrbanIndo\Yii2\DynamoDb;
 
 /**
@@ -28,19 +30,32 @@ namespace UrbanIndo\Yii2\DynamoDb;
 class ActiveDataProvider extends \yii\data\BaseDataProvider
 {
 
-    protected function prepareKeys($models)
+    /**
+     * Prepares the keys associated with the currently available data models.
+     * @param array $models The available data models.
+     * @return array the keys.
+     */
+    protected function prepareKeys(array $models)
     {
-        
+        $models;
+        return [];
     }
 
+    /**
+     * Prepares the data models that will be made available in the current page.
+     * @return array the available data models
+     */
     protected function prepareModels()
     {
-        
+        return [];
     }
 
+    /**
+     * Returns a value indicating the total number of data models in this data provider.
+     * @return integer total number of data models in this data provider.
+     */
     protected function prepareTotalCount()
     {
-        
+        return 0;
     }
-
 }

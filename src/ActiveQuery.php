@@ -1,6 +1,6 @@
 <?php
-
 /**
+ * ActiveQuery class file.
  * @author Petra Barus <petra.barus@gmail.com>
  */
 
@@ -34,7 +34,7 @@ use yii\db\ActiveRelationTrait;
  */
 class ActiveQuery extends Query implements ActiveQueryInterface
 {
-    
+
     use ActiveQueryTrait;
     use ActiveRelationTrait;
 
@@ -45,10 +45,10 @@ class ActiveQuery extends Query implements ActiveQueryInterface
 
     /**
      * Constructor.
-     * @param array $modelClass the model class associated with this query
-     * @param array $config configurations to be applied to the newly created query object
+     * @param mixed $modelClass The model class associated with this query.
+     * @param array $config     Configurations to be applied to the newly created query object.
      */
-    public function __construct($modelClass, $config = [])
+    public function __construct($modelClass, array $config = [])
     {
         $this->modelClass = $modelClass;
         parent::__construct($config);
@@ -59,18 +59,19 @@ class ActiveQuery extends Query implements ActiveQueryInterface
      * This method is called at the end of the constructor. The default implementation will trigger
      * an [[EVENT_INIT]] event. If you override this method, make sure you call the parent implementation at the end
      * to ensure triggering of the event.
+     * @return void
      */
     public function init()
     {
         parent::init();
         $this->trigger(self::EVENT_INIT);
     }
-    
+
     /**
-     * @param Connection $db
+     * @param Connection $db The DB connection used to create the DB command.
      * @return ActiveRecord
      */
-    public function one($db = null)
+    public function one(Connection $db = null)
     {
         /* @var $response \Guzzle\Service\Resource\Model */
         $response = parent::one($db);
@@ -78,12 +79,12 @@ class ActiveQuery extends Query implements ActiveQueryInterface
         $marshaller = new \Aws\DynamoDb\Marshaler();
         return $this->createModel($value, $marshaller);
     }
-    
+
     /**
-     * @param Connection $db
+     * @param Connection $db The DB connection used to create the DB command.
      * @return ActiveRecord[]
      */
-    public function all($db = null)
+    public function all(Connection $db = null)
     {
         $responses = parent::all($db);
         $modelClass = $this->modelClass;
@@ -92,15 +93,17 @@ class ActiveQuery extends Query implements ActiveQueryInterface
             return $this->createModel($value, $marshaller);
         }, $responses[$modelClass::tableName()]);
     }
-    
+
     /**
-     * Create model base on return.
-     * @param type $value
-     * @param Aws\DynamoDb\Marshaler $marshaller
-     * @return \UrbanIndo\Yii2\DynamoDb\modelClass
+     * Create model based on dynamodb return value.
+     * @param mixed                   $value      The return value from dynamodb.
+     * @param \Aws\DynamoDb\Marshaler $marshaller The marshaller.
+     * @return ActiveRecord
      */
-    private function createModel($value, \Aws\DynamoDb\Marshaler $marshaller = null)
-    {
+    private function createModel(
+        $value,
+        \Aws\DynamoDb\Marshaler $marshaller = null
+    ) {
         $model = new $this->modelClass;
         if (!isset($marshaller)) {
             $marshaller = new \Aws\DynamoDb\Marshaler();

@@ -1,21 +1,28 @@
 <?php
 
-class CommandTest extends TestCase {
+class CommandTest extends TestCase
+{
     
-    public function testCreate() {
-        /* @var $client \Aws\DynamoDb\DynamoDbClient */
-        $client = Yii::$app->dynamodb->getClient();
-        $command = $client->getCommand('CreateTable', [
-            'TableName' => 'Testing',
+    public function testCreateTable()
+    {
+        $db = $this->getConnection();
+        $command = $db->createCommand();
+        $faker = \Faker\Factory::create();
+        $tableName = $faker->firstNameMale;
+        $fieldName1 = $faker->firstNameMale;
+        
+        $this->assertFalse($command->tableExists($tableName));
+        
+        $command->createTable($tableName, [
             'KeySchema' => [
                 [
-                    'AttributeName' => 'Test1',
+                    'AttributeName' => $fieldName1,
                     'KeyType' => 'HASH',
                 ]
             ],
             'AttributeDefinitions' => [
                 [
-                    'AttributeName' => 'Test1',
+                    'AttributeName' => $fieldName1,
                     'AttributeType' => 'S',
                 ]
             ],
@@ -23,48 +30,150 @@ class CommandTest extends TestCase {
                 'ReadCapacityUnits' => 5,
                 'WriteCapacityUnits' => 5,
             ]
-        ]);
-        $result = $client->execute($command);
-        /* @var $result Aws\Result */
-        $description = $result->get('TableDescription');
-        $this->assertNotEmpty($description);
-    }
-    public function testPut() {
-        /* @var $client \Aws\DynamoDb\DynamoDbClient */
-        $client = Yii::$app->dynamodb->getClient();
+        ])->execute();
         
-        $marshaler = new \UrbanIndo\Yii2\DynamoDb\Marshaler();
-        $command = $client->getCommand('PutItem', [
-            'TableName' => 'Testing',
-            "Item" => $marshaler->marshalItem([
-                'Test1' => 'key',
-                "testobj1" => [
-                    'ada' => [
-                        'arr' => ["a", "b"],
-                        'p' => 'x'
+        $this->assertTrue($command->tableExists($tableName));
+        
+        $result = $command->describeTable($tableName)->execute();
+        $this->assertArraySubset([
+            'Table' => [
+                'AttributeDefinitions' => [
+                    [
+                        'AttributeName' => $fieldName1,
+                        'AttributeType' => 'S',
                     ]
                 ],
-            ])
-        ]);
-        /* @var $result \Guzzle\Service\Resource\Model */
-        $result = $command->execute();
-        $this->assertNotNull($result);
-    }
-    public function testGet() {
-        /* @var $client \Aws\DynamoDb\DynamoDbClient */
-        $client = Yii::$app->dynamodb->getClient();
-        $command = $client->getCommand('GetItem', [
-            'TableName' => 'Testing',
-            "Key" => [
-                'Test1' => [
-                    'S' => 'key'
+                'KeySchema' => [
+                    [
+                        'AttributeName' => $fieldName1,
+                        'KeyType' => 'HASH',
+                    ]
                 ],
+                'TableName' => $tableName,
             ]
-        ]);
-        /* @var $result \Guzzle\Service\Resource\Model */
-        $result = $command->execute();
-        $result = (new \UrbanIndo\Yii2\DynamoDb\Marshaler)->unmarshalItem($result->get('Item'));
-        $this->assertArraySubset(['Test1' => 'key'], $result);
+        ], $result);
+    }
+    
+    public function testDeleteTable()
+    {
+        $db = $this->getConnection();
+        $command = $db->createCommand();
+        $faker = \Faker\Factory::create();
+        $tableName = $faker->firstNameMale;
+        $fieldName1 = $faker->firstNameMale;
+        
+        $this->assertFalse($command->tableExists($tableName));
+        
+        $command->createTable($tableName, [
+            'KeySchema' => [
+                [
+                    'AttributeName' => $fieldName1,
+                    'KeyType' => 'HASH',
+                ]
+            ],
+            'AttributeDefinitions' => [
+                [
+                    'AttributeName' => $fieldName1,
+                    'AttributeType' => 'S',
+                ]
+            ],
+            'ProvisionedThroughput' => [
+                'ReadCapacityUnits' => 5,
+                'WriteCapacityUnits' => 5,
+            ]
+        ])->execute();
+        
+        $this->assertTrue($command->tableExists($tableName));
+        
+        $command->deleteTable($tableName)->execute();
+        
+        $this->assertFalse($command->tableExists($tableName));
+    }
+    
+    public function testPutItem()
+    {
+        $db = $this->getConnection();
+        $command = $db->createCommand();
+        $faker = \Faker\Factory::create();
+        $tableName = $faker->firstNameMale;
+        $fieldName1 = $faker->firstNameMale;
+        
+        $command->createTable($tableName, [
+            'KeySchema' => [
+                [
+                    'AttributeName' => $fieldName1,
+                    'KeyType' => 'HASH',
+                ]
+            ],
+            'AttributeDefinitions' => [
+                [
+                    'AttributeName' => $fieldName1,
+                    'AttributeType' => 'S',
+                ]
+            ],
+            'ProvisionedThroughput' => [
+                'ReadCapacityUnits' => 5,
+                'WriteCapacityUnits' => 5,
+            ]
+        ])->execute();
+        
+        $this->assertNotFalse($command->tableExists($tableName));
+        
+        $this->assertEquals(0, $this->getTableItemCount($tableName));
+        
+        $command->putItem($tableName, [
+            $fieldName1 => $faker->firstNameFemale,
+        ])->execute();
+        
+        $this->assertEquals(1, $this->getTableItemCount($tableName));
+        
+        $command->putItem($tableName, [
+            $fieldName1 => $faker->firstNameFemale,
+            'Field2' => 'Hello',
+        ])->execute();
+
+        $this->assertEquals(2, $this->getTableItemCount($tableName));
+    }
+    
+    private function getTableItemCount($tableName) {
+        $tableDescription = $this->getConnection()->createCommand()->describeTable($tableName)->execute();
+        return $tableDescription['Table']['ItemCount'];
+    }
+    
+    public function testGetItemUsingScalarKey()
+    {
+        $db = $this->getConnection();
+        $command = $db->createCommand();
+        $faker = \Faker\Factory::create();
+        $tableName = $faker->firstNameMale;
+        $fieldName1 = $faker->firstNameMale;
+        
+        $command->createTable($tableName, [
+            'KeySchema' => [
+                [
+                    'AttributeName' => $fieldName1,
+                    'KeyType' => 'HASH',
+                ]
+            ],
+            'AttributeDefinitions' => [
+                [
+                    'AttributeName' => $fieldName1,
+                    'AttributeType' => 'S',
+                ]
+            ],
+            'ProvisionedThroughput' => [
+                'ReadCapacityUnits' => 5,
+                'WriteCapacityUnits' => 5,
+            ]
+        ])->execute();
+        
+        
+        
+    }
+    
+    public function testGetItemUsingCompositeKey()
+    {
+        
     }
 }
 
