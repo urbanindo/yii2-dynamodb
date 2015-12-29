@@ -338,4 +338,21 @@ class QueryBuilder extends Object
         }
         return $this->buildBatchGetItemFromIndexedArrayOfAssociativeArray($keySchema, $indexedKey);
     }
+    
+    /**
+     * Builds a DynamoDB command to scan table.
+     *
+     * @param string $table   The name of the table to scan.
+     * @param array  $options The scan options.
+     * @return array The create table request syntax. The first element is the name of the command,
+     * the second is the argument.
+     */
+    public function scan($table, array $options = [])
+    {
+        $name = 'Scan';
+        $argument = array_merge([
+            'TableName' => $table,
+        ], $options);
+        return [$name, $argument];
+    }
 }

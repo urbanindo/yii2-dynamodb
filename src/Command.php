@@ -147,6 +147,18 @@ class Command extends Object
     }
     
     /**
+     * Scan table.
+     * @param string $table   The name of the table.
+     * @param array  $options Options to the request argument.
+     * @return static
+     */
+    public function scan($table, array $options = [])
+    {
+        list($name, $argument) = $this->db->getQueryBuilder()->scan($table, $options);
+        return $this->setCommand($name, $argument);
+    }
+    
+    /**
      * Get multiple items from table using keys.
      *
      * @param string $table   The name of the table.

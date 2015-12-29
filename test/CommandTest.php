@@ -674,5 +674,100 @@ class CommandTest extends TestCase
         $this->assertNotEmpty($result);
         $this->assertEmpty($result['UnprocessedKeys']);
     }
+    
+    /**
+     * @group scan
+     */
+    public function testScan()
+    {
+        $db = $this->getConnection();
+        $command = $db->createCommand();
+        $faker = \Faker\Factory::create();
+        $tableName = $faker->uuid;
+        $fieldName1 = $faker->firstNameMale;
+        
+        $command->createTable($tableName, [
+            'KeySchema' => [
+                [
+                    'AttributeName' => $fieldName1,
+                    'KeyType' => 'HASH',
+                ]
+            ],
+            'AttributeDefinitions' => [
+                [
+                    'AttributeName' => $fieldName1,
+                    'AttributeType' => 'S',
+                ]
+            ],
+            'ProvisionedThroughput' => [
+                'ReadCapacityUnits' => 5,
+                'WriteCapacityUnits' => 5,
+            ]
+        ])->execute();
+        
+        foreach (range(1, 10) as $i) {
+            $command->putItem($tableName, [
+                $fieldName1 => $faker->uuid,
+                'field2' => $i,
+                'field3' => $i,
+                'field4' => $i % 3,
+            ])->execute();
+        }
+        
+        $result1 = $command->scan($tableName, [
+            'FilterExpression' => 'field2 > :val1',
+            'ExpressionAttributeValues' => [
+                ':val1' => ['N' => '3']
+            ],
+        ])->execute();
+        
+        $this->assertNotEmpty($result1);
+        $this->assertEquals(7, $result1['Count']);
+        
+        $result2 = $command->scan($tableName, [
+            'FilterExpression' => 'field2 > :val1 AND field2 < :val2',
+            'ExpressionAttributeValues' => [
+                ':val1' => ['N' => '3'],
+                ':val2' => ['N' => '6']
+            ],
+        ])->execute();
+        
+        $this->assertNotEmpty($result2);
+        $this->assertEquals(2, $result2['Count']);
+        
+        $result3 = $command->scan($tableName, [
+            'FilterExpression' => 'field2 > :val1 AND field4 = :val2',
+            'ExpressionAttributeValues' => [
+                ':val1' => ['N' => '3'],
+                ':val2' => ['N' => '2']
+            ],
+        ])->execute();
+        
+        $this->assertNotEmpty($result3);
+        $this->assertEquals(2, $result3['Count']);
+        
+        $result4 = $command->scan($tableName, [
+            'FilterExpression' => 'field4 = :val1 OR field1 = :val2',
+            'ExpressionAttributeValues' => [
+                ':val1' => ['N' => '2'],
+                ':val2' => ['N' => '4']
+            ],
+        ])->execute();
+        
+        $this->assertNotEmpty($result4);
+        $this->assertEquals(3, $result4['Count']);
+        
+        $result5 = $command->scan($tableName, [
+            'FilterExpression' => 'field4 = :val1 AND (field1 = :val2 OR field2 = :val3)',
+            'ExpressionAttributeValues' => [
+                ':val1' => ['N' => '2'],
+                ':val2' => ['N' => '4'],
+                ':val3' => ['N' => '5']
+            ],
+        ])->execute();
+        
+        $this->assertNotEmpty($result5);
+        $this->assertEquals(1, $result5['Count']);
+    }
 }
 

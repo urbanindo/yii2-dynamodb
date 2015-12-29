@@ -150,12 +150,10 @@ class ActiveRecord extends BaseActiveRecord
     public static function primaryKey()
     {
         if (!isset(self::$_primaryKeys[get_called_class()])) {
-            $client = self::getDb()->getClient();
-            $command = $client->getCommand('DescribeTable', [
-                'TableName' => self::tableName()
-            ]);
-            $result = $client->execute($command);
-            $keySchema = $result['KeySchema'];
+            $description = self::getDb()->createCommand()
+                    ->describeTable(self::tableName())
+                    ->execute();
+            $keySchema = $description['KeySchema'];
             $keys = [];
             foreach ($keySchema as $key) {
                 $idx = $key['KeyType'] == 'HASH' ? 0 : 1;
@@ -255,6 +253,6 @@ class ActiveRecord extends BaseActiveRecord
      */
     public static function deleteAll($condition = '', array $params = [])
     {
-        parent::deleteAll($condition, $params);
+        throw new \yii\base\NotSupportedException(__METHOD__ . ' is not supported.');
     }
 }
