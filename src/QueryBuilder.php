@@ -10,6 +10,7 @@ namespace UrbanIndo\Yii2\DynamoDb;
 
 use yii\base\Object;
 use Aws\DynamoDb\Marshaler;
+use yii\helpers\ArrayHelper;
 
 /**
  * QueryBuilder builds an elasticsearch query based on the specification given
@@ -108,21 +109,46 @@ class QueryBuilder extends Object
      * Builds a DynamoDB command to get item.
      *
      * @param string $table   The name of the table to be created.
-     * @param mixed  $key   The value to put into the table.
+     * @param mixed  $key     The key of the item to get. This can be a scalar
+     * (numeric or string) or an indexed array or an associative array.
+     * If the key is indexed array, the first element will be the primary key,
+     * and the second element will be the secondary key.
      * @param array  $options The value to put into the table.
      * @return array The create table request syntax. The first element is the name of the command,
      * the second is the argument.
      */
     public function getItem($table, $key, array $options = []) {        
-        $marshaler = new Marshaler();
         $name = 'GetItem';
-        
-        //TODO build the argument base don key.
+        //TODO refactor this.
+        $tableDescription = $this->db->createCommand()->describeTable($table)->execute();
+        $keySchema = $tableDescription['Table']['KeySchema'];
+        $marshaler = new Marshaler();
         if (is_string($key) || is_numeric($key)) {
-            
+            if (count($keySchema) > 1) {
+                throw new \InvalidArgumentException('Can not use scalar key argument on table with multiple key');
+            }
+            $keyName = $keySchema[0]['AttributeName'];
+            $keyArgument = [
+                $keyName => $marshaler->marshalValue($key),
+            ];
         } else {
-            
+            $keyArgument = [];
+            if (ArrayHelper::isIndexed($key)) {
+                foreach ($key as $i => $value) {
+                    $keyArgument[$keySchema[$i]['AttributeName']] = $marshaler->marshalValue($value);
+                }
+            } else {
+                foreach ($key as $i => $value) {
+                    $keyArgument[$i] = $marshaler->marshalValue($value);
+                }
+            }
         }
+
+        $argument = array_merge(
+            ['TableName' => $table],
+            ['Key' => $keyArgument],
+            $options
+        );
         return [$name, $argument];
     }
 }

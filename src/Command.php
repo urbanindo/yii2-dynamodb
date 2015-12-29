@@ -7,6 +7,7 @@
 namespace UrbanIndo\Yii2\DynamoDb;
 
 use Aws\DynamoDb\DynamoDbClient;
+use Aws\DynamoDb\Marshaler;
 use Guzzle\Service\Resource\Model;
 use Yii;
 use yii\base\NotSupportedException;
@@ -123,6 +124,7 @@ class Command extends Object
      * @param string $table   The name of the table.
      * @param array  $value   The values to input.
      * @param array  $options Additional options to the request argument.
+     * @return static
      */
     public function putItem($table, array $value, array $options = [])
     {
@@ -135,6 +137,7 @@ class Command extends Object
      * @param string $table   The name of the table.
      * @param mixed  $key     The values to input.
      * @param array  $options Additional options to the request argument.
+     * @return static
      */
     public function getItem($table, $key, $options = [])
     {
@@ -173,19 +176,17 @@ class Command extends Object
     }
 
     /**
-     * 
-     * @return type
+     * Executes the query and returns the first item of the result.
+     * @return array The items that are already marshaled.
      */
     public function queryOne()
     {
         $response = $this->execute();
+        if ($this->name == 'GetItem') {
+            $marshaller = new Marshaler();
+            return $marshaller->unmarshalItem($response['Item']);
+        }
         return $response;
-    }
-
-    public function queryAll()
-    {
-        $response = $this->execute();
-        return $response->get('Responses');
     }
 
 }
