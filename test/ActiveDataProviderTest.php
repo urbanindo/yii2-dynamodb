@@ -12,50 +12,40 @@ class ActiveDataProviderTest extends TestCase
     
     public function testWithoutPagination()
     {
-        $command = $this->createCommand();
-        
-        list($tableName, $fieldName1) = $this->createSimpleTableWithHashKey();
-        
-        $faker = Faker\Factory::create();
-        
-        $values = array_map(function ($id) use ($faker, $fieldName1) {
-            return [
-                $fieldName1 => $faker->uuid,
-                'Field2' => $id,
-            ];
-        }, range(1, 25));
-        
-        $command->batchPutItem($tableName, $values)->execute();
+        $faker = \Faker\Factory::create();
+        foreach (range(1, 10) as $id) {
+            $model = new test\data\Customer([
+                'id' => $id,
+                'name' => $faker->firstNameMale,
+                'age' => ($id % 2) + 1,
+            ]);
+            $model->save(false);
+        }
         
         $dataProvider = new ActiveDataProvider([
-            'query' => test\data\Customer::find(),
+            'query' => test\data\Customer::find()->where(['age' => 2]),
             'pagination' => false,
         ]);
         
-        $this->assertCount(25, $dataProvider->getModels());
+        $this->assertCount(5, $dataProvider->getModels());
         
         $this->assertFalse($dataProvider->getPagination());
     }
     
     public function testPagination()
     {
-        $command = $this->createCommand();
-        
-        list($tableName, $fieldName1) = $this->createSimpleTableWithHashKey();
-        
-        $faker = Faker\Factory::create();
-        
-        $values = array_map(function ($id) use ($faker, $fieldName1) {
-            return [
-                $fieldName1 => $faker->uuid,
-                'Field2' => $id,
-            ];
-        }, range(1, 25));
-        
-        $command->batchPutItem($tableName, $values)->execute();
+        $faker = \Faker\Factory::create();
+        foreach (range(1, 50) as $id) {
+            $model = new test\data\Customer([
+                'id' => $id,
+                'name' => $faker->firstNameMale,
+                'age' => $id,
+            ]);
+            $model->save(false);
+        }
         
         $dataProvider1 = new ActiveDataProvider([
-            'query' => test\data\Customer::find(),
+            'query' => test\data\Customer::find()->where(['>', 'age', 15]),
             'pagination' => [
                 'pageSize' => 5,
             ]

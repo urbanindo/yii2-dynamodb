@@ -10,6 +10,23 @@ abstract class TestCase extends \PHPUnit_Framework_TestCase
      */
     public function getConnection()
     {
+        $this->mockWebApplication([
+            'components' => [
+                'dynamodb' => [
+                    /* @var $dynamodb \UrbanIndo\Yii2\DynamoDb\Connection */
+                    'class' => '\UrbanIndo\Yii2\DynamoDb\Connection',
+                    'config' => [
+                        'credentials' => [
+                            'key' => 'AKIA',
+                            'secret' => '1234567890',
+                        ],
+                        'region' => 'ap-southeast-1',
+                        'version' => 'latest',
+                        'endpoint' => DYNAMODB_URL,
+                    ]
+                ]
+            ]
+        ]);
         return Yii::$app->dynamodb;
     }
     

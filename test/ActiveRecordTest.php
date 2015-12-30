@@ -34,6 +34,13 @@ class ActiveRecordTest extends TestCase {
         
         $this->assertTrue($objectToInsert->save(false));
         $this->assertEquals(1, $this->getTableItemCount(\test\data\Customer::tableName()));
+        $objectFromFind = \test\data\Customer::findOne(['id' => $id]);
+       
+        /* @var $objectFromFind data\Customer */
+        $this->assertNotNull($objectFromFind);
+        $this->assertEquals($id, $objectFromFind->id);
+        $this->assertEquals($objectToInsert->name, $objectFromFind->name);
+        $this->assertEquals($objectToInsert->kids, $objectFromFind->kids);
     }
     
     public function testInsertAndFindAll() {
@@ -61,6 +68,7 @@ class ActiveRecordTest extends TestCase {
         ];
         
         $this->assertTrue($objectToInsert1->save(false));
+        $this->assertEquals(1, $this->getTableItemCount(\test\data\Customer::tableName()));
         
         $objectsFromFind = \test\data\Customer::findAll(['id' => [$id1]]);
        

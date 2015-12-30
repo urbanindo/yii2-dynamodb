@@ -77,7 +77,7 @@ class ActiveQuery extends Query implements ActiveQueryInterface
         if (empty($rows)) {
             return [];
         }
-        
+
         $models = $this->createModels($rows);
         if (!$this->asArray) {
             foreach ($models as $model) {
@@ -88,6 +88,26 @@ class ActiveQuery extends Query implements ActiveQueryInterface
         }
         return $models;
     }
+    
+    /**
+     * Prepares for building SQL.
+     * This method is called by [[QueryBuilder]] when it starts to build SQL from a query object.
+     * You may override this method to do some final preparation work when converting a query into a SQL statement.
+     * @param QueryBuilder $builder The query builder.
+     * @return $this a prepared query instance which will be used by [[QueryBuilder]] to build the SQL
+     */
+    public function prepare(QueryBuilder $builder)
+    {
+        $builder;
+        if (empty($this->from)) {
+            /* @var $modelClass ActiveRecord */
+            $modelClass = $this->modelClass;
+            $tableName = $modelClass::tableName();
+            $this->from = $tableName;
+        }
+        return $this;
+    }
+    
 
     /**
      * Executes query and returns a single row of result.

@@ -204,7 +204,7 @@ class ActiveRecord extends BaseActiveRecord
      * @param array $options   Additional attribute.
      * @return static
      */
-    public static function findOne($condition, $options = null)
+    public static function findOne($condition, $options = [])
     {
         return self::find($options)->where($condition)->one();
     }
@@ -215,7 +215,7 @@ class ActiveRecord extends BaseActiveRecord
      * @param array $options   Additional attribute for the query class.
      * @return static[]
      */
-    public static function findAll($condition, $options = null)
+    public static function findAll($condition, $options = [])
     {
         return self::find($options)->where($condition)->all();
     }

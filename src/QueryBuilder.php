@@ -10,6 +10,7 @@ namespace UrbanIndo\Yii2\DynamoDb;
 use yii\base\Object;
 use yii\helpers\ArrayHelper;
 use yii\base\InvalidParamException;
+use InvalidArgumentException;
 
 /**
  * QueryBuilder builds an elasticsearch query based on the specification given
@@ -66,6 +67,8 @@ class QueryBuilder extends Object
      */
     public function build(Query $query)
     {
+        $query = $query->prepare($this);
+        
         // Validate query
         if (empty($query->from)) {
             throw new InvalidArgumentException('Table name not set');
@@ -84,7 +87,7 @@ class QueryBuilder extends Object
                 $query->using = Query::USING_BATCH_GET_ITEM;
             }
         }
-
+        
         $call = 'build' . $query->using;
 
         // Call builder
@@ -129,7 +132,7 @@ class QueryBuilder extends Object
             throw new InvalidArgumentException($query->using .
                 ' is not support parameter beside where and select clause.');
         }
-
+        
         return $this->batchGetItem(
             $query->from,
             $this->buildWhereGetItem($query),
@@ -188,7 +191,7 @@ class QueryBuilder extends Object
      * @return array Array of projection options.
      */
     public function buildProjection(Query $query)
-    {
+    {   
         if (!empty($query->select)) {
             return is_array($query->select) ? [
                     'ProjectionExpression' => implode(', ', $query->select)
@@ -217,8 +220,8 @@ class QueryBuilder extends Object
         // remain array type
         // supported example: ['a' => 'b'], ['IN', 'a', 'b'], [['IN', 'a', 'b']]
         // and combination of it like [['IN', 'a', 'b'], 'c' => 'd']
-
-        $new_where = [];
+        
+        $newWhere = [];
         foreach ($query->where as $key => $value) {
             if (is_string($value) || is_numeric($value)) {
                 if (ArrayHelper::isIndexed($query->where)) {
@@ -231,30 +234,30 @@ class QueryBuilder extends Object
                     }
 
                     if (is_array($query->where[2])) {
-                        $new_where[$query->where[1]] = $query->where[2];
+                        $newWhere[$query->where[1]] = $query->where[2];
                     } else {
-                        $new_where[$query->where[1]] = [$query->where[2]];
+                        $newWhere[$query->where[1]] = [$query->where[2]];
                     }
                     break;
                 } else {
-                    if (isset($new_where[$key])) {
-                        $new_where[$key] = array_merge($new_where[$key], [$value]);
+                    if (isset($newWhere[$key])) {
+                        $newWhere[$key] = array_merge($newWhere[$key], [$value]);
                     } else {
-                        $new_where[$key] = [$value];
+                        $newWhere[$key] = [$value];
                     }
                 }
             } else { // else just array type, perhaps
                 if (ArrayHelper::isIndexed($value)) {
-                    if (isset($new_where[$key])) {
-                        $new_where[$key] = array_merge($new_where[$key], $value);
+                    if (isset($newWhere[$key])) {
+                        $newWhere[$key] = array_merge($newWhere[$key], $value);
                     } else {
-                        $new_where[$key] = $value;
+                        $newWhere[$key] = $value;
                     }
                 }
             }
         }
-
-        return $new_where;
+        
+        return $newWhere;
     }
 
     /**
@@ -636,7 +639,7 @@ class QueryBuilder extends Object
             }
             $options['ReturnConsumedCapacity'] = $query->returnConsumedCapacity;
         }
-
+        
         return array_merge($options, $this->buildProjection($query));
     }
 
@@ -819,13 +822,13 @@ class QueryBuilder extends Object
     public function batchGetItem($table, array $keys, array $options = [], array $requestItemOptions = [])
     {
         $name = 'BatchGetItem';
-
+        
         $tableArgument = [
             $table => array_merge([
                 'Keys' => $this->buildBatchKeyArgument($table, $keys),
             ], $requestItemOptions)
         ];
-
+        
         $argument = array_merge(['RequestItems' => $tableArgument], $options);
         return [$name, $argument];
     }
@@ -840,7 +843,7 @@ class QueryBuilder extends Object
     {
         $tableDescription = $this->db->createCommand()->describeTable($table)->execute();
         $keySchema = $tableDescription['Table']['KeySchema'];
-
+        
         if (ArrayHelper::isIndexed($keys)) {
             $isScalar = is_string($keys[0]) || is_numeric($keys[0]);
             if ($isScalar) {

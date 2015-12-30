@@ -106,9 +106,12 @@ class Query extends Component implements QueryInterface
         if ($db === null) {
             $db = Yii::$app->get('dynamodb');
         }
-        $config = $db->getQueryBuilder()->build($this);
-
-        return $db->createCommand($config);
+        list($name, $argument) = $db->getQueryBuilder()->build($this);
+        
+        return $db->createCommand([
+            'name' => $name,
+            'argument' => $argument,
+        ]);
     }
 
 
@@ -194,6 +197,12 @@ class Query extends Component implements QueryInterface
     /**
      * Whether to use the consumed capacity.
      * @param string $setConsumedCapacity String about consumed capacity.
+     * Available values are
+     * <ul>
+     *  <li>INDEXES</li>
+     *  <li>TOTAL</li>
+     *  <li>NONE</li>
+     * </ul>
      * @return static
      */
     public function setConsumedCapacity($setConsumedCapacity)
@@ -220,7 +229,7 @@ class Query extends Component implements QueryInterface
             $row = Marshaler::unmarshalItem($response['Item']);
             $rows = [$row];
         }
-
+        
         $storedResponse = self::extractStoredResponseData($this->storeResponseData, $response);
         if (!empty($storedResponse)) {
             $rows = array_map(function ($row) use ($storedResponse) {
@@ -250,6 +259,18 @@ class Query extends Component implements QueryInterface
             $return[$key] = $value;
         }
         return $return;
+    }
+    
+    /**
+     * Prepares for building SQL.
+     * This method is called by [[QueryBuilder]] when it starts to build SQL from a query object.
+     * You may override this method to do some final preparation work when converting a query into a SQL statement.
+     * @param QueryBuilder $builder The query builder.
+     * @return $this a prepared query instance which will be used by [[QueryBuilder]] to build the SQL
+     */
+    public function prepare(QueryBuilder $builder)
+    {
+        return $this;
     }
 
     /**
@@ -287,7 +308,7 @@ class Query extends Component implements QueryInterface
     {
         $response = $this->execute($db);
         $rows = $this->getItemsFromResponse($response);
-        return $rows;
+        return $this->populate($rows);
     }
 
     /**
@@ -299,9 +320,15 @@ class Query extends Component implements QueryInterface
      */
     public function one($db = null)
     {
+        if (in_array($this->using, [self::USING_QUERY, self::USING_SCAN])) {
+            $this->limit(1);
+        }
         $response = $this->execute($db);
         $rows = $this->getItemsFromResponse($response);
-        return $rows;
+        if (empty($rows)) {
+            return false;
+        }
+        return reset($rows) ?: null;
     }
 
     /**

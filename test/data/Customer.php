@@ -31,6 +31,7 @@ class Customer extends \UrbanIndo\Yii2\DynamoDb\ActiveRecord {
             'contacts',
             'prices',
             'kids',
+            'age',
         ];
     }
 }
