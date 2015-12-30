@@ -344,12 +344,29 @@ class QueryBuilder extends Object
      *
      * @param string $table   The name of the table to scan.
      * @param array  $options The scan options.
-     * @return array The create table request syntax. The first element is the name of the command,
+     * @return array The scan table request syntax. The first element is the name of the command,
      * the second is the argument.
      */
     public function scan($table, array $options = [])
     {
         $name = 'Scan';
+        $argument = array_merge([
+            'TableName' => $table,
+        ], $options);
+        return [$name, $argument];
+    }
+    
+    /**
+     * Builds a DynamoDB command to query table.
+     *
+     * @param string $table   The name of the table to query.
+     * @param array  $options The scan options.
+     * @return array The query table request syntax. The first element is the name of the command,
+     * the second is the argument.
+     */
+    public function query($table, array $options = [])
+    {
+        $name = 'Query';
         $argument = array_merge([
             'TableName' => $table,
         ], $options);
