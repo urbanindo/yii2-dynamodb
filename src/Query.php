@@ -11,6 +11,7 @@ use yii\base\Component;
 use yii\db\QueryInterface;
 use yii\db\QueryTrait;
 use yii\base\NotSupportedException;
+use yii\helpers\ArrayHelper;
 
 /**
  * Query represents item fetching operation from DynamoDB table.
@@ -81,6 +82,21 @@ class Query extends Component implements QueryInterface
      * @var string
      */
     public $from;
+    
+    /**
+     * Whether to store response data in the data returned. This can be either boolean
+     * false if not to store response data or the key of the response to store.
+     * @var array|boolean
+     */
+    public $storeResponseData = ['ConsumedCapacity', 'LastEvaluatedKey', 'ScannedCount', 'Count'];
+    
+    /**
+     * The key to store the response data. When populating the values of the response data for
+     * keys listed in [[storeResponseData]] will be stored on each row returned on the key
+     * stated in this variable.
+     * @var string
+     */
+    public $responseDataKeyParam = '_response';
 
     /**
      * Executes the query and returns all results as an array.
@@ -185,13 +201,90 @@ class Query extends Component implements QueryInterface
         $this->returnConsumedCapacity = false;
         return $this;
     }
+    
+    /**
+     * @param array $response The raw response result from operation.
+     * @return array array of values.
+     */
+    public function getItemsFromResponse($response)
+    {
+        if (in_array($this->using, [self::USING_QUERY, self::USING_SCAN])) {
+            $rows = array_map(function ($item) {
+                return Marshaler::unmarshalItem($item);
+            }, $response['Items']);
+        } else if ($this->using == self::USING_BATCH_GET_ITEM) {
+            $rows = array_map(function ($item) {
+                return Marshaler::unmarshalItem($item);
+            }, $response['Responses'][$this->from]);
+        } else if ($this->using == self::USING_GET_ITEM) {
+            $row = Marshaler::unmarshalItem($response['Item']);
+            $rows = [$row];
+        }
+        
+        $storedResponse = self::extractStoredResponseData($this->storeResponseData, $response);
+        if (!empty($storedResponse)) {
+            $rows = array_map(function ($row) use ($storedResponse) {
+                $row[$this->responseDataKeyParam] = $storedResponse;
+                return $row;
+            }, $rows);
+        }
+        
+        return $rows;
+    }
+    
+    /**
+     * @param mixed $responseKeys List of keys to store from operation response, false if don't want to store.
+     * @param array $response     The raw response from operation.
+     * @return array Stored response data.
+     */
+    private static function extractStoredResponseData($responseKeys, $response)
+    {
+        if ($responseKeys == false) {
+            return [];
+        }
+        $return = [];
+        foreach ($responseKeys as $key) {
+            if (empty($value = ArrayHelper::getValue($response, $key))) {
+                continue;
+            }
+            $return[$key] = $value;
+        }
+        return $return;
+    }
+    
+    /**
+     * Converts the raw query results into the format as specified by this query.
+     * This method is internally used to convert the data fetched from database
+     * into the format as required by this query.
+     * @param array $response The raw response result from operation.
+     * @return array the converted query result
+     */
+    public function populate($response)
+    {
+        $rows = $this->getItemsFromResponse($response);
+        if ($this->indexBy === null) {
+            return $rows;
+        }
+        $result = [];
+        foreach ($rows as $row) {
+            if (is_string($this->indexBy)) {
+                $key = $row[$this->indexBy];
+            } else if (is_array($this->indexBy)) {
+                $key = $row[$this->indexBy[0]] . $row[$this->indexBy[1]];
+            } else {
+                $key = call_user_func($this->indexBy, $row);
+            }
+            $result[$key] = $row;
+        }
+        return $result;
+    }
 
     /**
      * Returns all object that matches the query.
      * @param Connection $db The dynamodb connection.
      * @return array
      */
-    public function all(Connection $db = null)
+    public function all($db = null)
     {
         return $this->createCommand($db)->queryAll();
     }
@@ -201,7 +294,7 @@ class Query extends Component implements QueryInterface
      * @param Connection $db The dynamodb connection.
      * @return array
      */
-    public function one(Connection $db = null)
+    public function one($db = null)
     {
         $this->using = self::USING_GET_ITEM;
         return $this->createCommand($db)->queryOne();
@@ -209,19 +302,29 @@ class Query extends Component implements QueryInterface
 
     /**
      * Returns the number of records.
-     * @param string $q the COUNT expression. This parameter is ignored by this implementation.
-     * @param Connection $db the database connection used to execute the query.
+     * @param string     $q  The COUNT expression. This parameter is ignored by this implementation.
+     * @param Connection $db The database connection used to execute the query.
      * If this parameter is not given, the `elasticsearch` application component will be used.
      * @return integer number of records
      */
-    public function count($q = '*', Connection $db = null)
+    public function count($q = '*', $db = null)
     {
-        
+        //WIP
+        $q;
+        $db;
+        return $i;
     }
 
+    /**
+     * Returns a value indicating whether the query result contains any row of data.
+     * @param Connection $db The database connection used to generate the SQL statement.
+     * If this parameter is not given, the `db` application component will be used.
+     * @return boolean whether the query result contains any row of data.
+     */
     public function exists($db = null)
     {
-        
+        //WIP
+        $db;
+        return false;
     }
-
 }

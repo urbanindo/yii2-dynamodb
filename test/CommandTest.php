@@ -187,7 +187,7 @@ class CommandTest extends TestCase
         $command->putItem($tableName, $value)->execute();
         
         $result = $command->getItem($tableName, $id)->execute();
-        
+
         $this->assertNotEmpty($result);
         
     }
@@ -429,7 +429,7 @@ class CommandTest extends TestCase
         $this->assertEquals(10, $this->getTableItemCount($tableName));
         
         $result = $command->batchGetItem($tableName, $ids)->execute();
-        
+
         $this->assertNotEmpty($result);
         $this->assertEmpty($result['UnprocessedKeys']);
     }

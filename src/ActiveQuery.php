@@ -41,13 +41,6 @@ class ActiveQuery extends Query implements ActiveQueryInterface
      * @event Event an event that is triggered when the query is initialized via [[init()]].
      */
     const EVENT_INIT = 'init';
-    
-    /**
-     * Whether to store response data in ActiveRecord model returned. This can be either boolean
-     * false if not to store response data or the key of the response to store.
-     * @var array|boolean
-     */
-    public $storeResponseData = ['ConsumedCapacity', 'LastEvaluatedKey', 'ScannedCount'];
 
     /**
      * Constructor.
