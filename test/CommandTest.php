@@ -2,41 +2,26 @@
 
 class CommandTest extends TestCase
 {
+    /**
+     * @group createTable
+     */
+    public function testTableExists()
+    {
+        $command = $this->createCommand();
+        $faker = \Faker\Factory::create();
+        $tableName = $faker->uuid;
+        
+        $this->assertFalse($command->tableExists($tableName));
+    }
     
     /**
      * @group createTable
      */
     public function testCreateTable()
     {
-        $db = $this->getConnection();
-        $command = $db->createCommand();
-        $faker = \Faker\Factory::create();
-        $tableName = $faker->uuid;
-        $fieldName1 = $faker->firstNameMale;
-        
-        $this->assertFalse($command->tableExists($tableName));
-        
-        $command->createTable($tableName, [
-            'KeySchema' => [
-                [
-                    'AttributeName' => $fieldName1,
-                    'KeyType' => 'HASH',
-                ]
-            ],
-            'AttributeDefinitions' => [
-                [
-                    'AttributeName' => $fieldName1,
-                    'AttributeType' => 'S',
-                ]
-            ],
-            'ProvisionedThroughput' => [
-                'ReadCapacityUnits' => 5,
-                'WriteCapacityUnits' => 5,
-            ]
-        ])->execute();
-        
+        $command = $this->createCommand();
+        list($tableName, $fieldName1) = $this->createSimpleTableWithHashKey();
         $this->assertTrue($command->tableExists($tableName));
-        
         $result = $command->describeTable($tableName)->execute();
         $this->assertArraySubset([
             'Table' => [
@@ -62,32 +47,9 @@ class CommandTest extends TestCase
      */
     public function testDeleteTable()
     {
-        $db = $this->getConnection();
-        $command = $db->createCommand();
-        $faker = \Faker\Factory::create();
-        $tableName = $faker->uuid;
-        $fieldName1 = $faker->firstNameMale;
+        $command = $this->createCommand();
         
-        $this->assertFalse($command->tableExists($tableName));
-        
-        $command->createTable($tableName, [
-            'KeySchema' => [
-                [
-                    'AttributeName' => $fieldName1,
-                    'KeyType' => 'HASH',
-                ]
-            ],
-            'AttributeDefinitions' => [
-                [
-                    'AttributeName' => $fieldName1,
-                    'AttributeType' => 'S',
-                ]
-            ],
-            'ProvisionedThroughput' => [
-                'ReadCapacityUnits' => 5,
-                'WriteCapacityUnits' => 5,
-            ]
-        ])->execute();
+        list($tableName, $fieldName1) = $this->createSimpleTableWithHashKey();
         
         $this->assertTrue($command->tableExists($tableName));
         
@@ -101,30 +63,11 @@ class CommandTest extends TestCase
      */
     public function testPutItem()
     {
-        $db = $this->getConnection();
-        $command = $db->createCommand();
-        $faker = \Faker\Factory::create();
-        $tableName = $faker->uuid;
-        $fieldName1 = $faker->firstNameMale;
+        $command = $this->createCommand();
         
-        $command->createTable($tableName, [
-            'KeySchema' => [
-                [
-                    'AttributeName' => $fieldName1,
-                    'KeyType' => 'HASH',
-                ]
-            ],
-            'AttributeDefinitions' => [
-                [
-                    'AttributeName' => $fieldName1,
-                    'AttributeType' => 'S',
-                ]
-            ],
-            'ProvisionedThroughput' => [
-                'ReadCapacityUnits' => 5,
-                'WriteCapacityUnits' => 5,
-            ]
-        ])->execute();
+        list($tableName, $fieldName1) = $this->createSimpleTableWithHashKey();
+        
+        $faker = \Faker\Factory::create();
         
         $this->assertNotFalse($command->tableExists($tableName));
         
@@ -154,30 +97,11 @@ class CommandTest extends TestCase
      */
     public function testGetItemUsingScalarKey()
     {
-        $db = $this->getConnection();
-        $command = $db->createCommand();
-        $faker = \Faker\Factory::create();
-        $tableName = $faker->uuid;
-        $fieldName1 = $faker->firstNameMale;
+        $command = $this->createCommand();
         
-        $command->createTable($tableName, [
-            'KeySchema' => [
-                [
-                    'AttributeName' => $fieldName1,
-                    'KeyType' => 'HASH',
-                ]
-            ],
-            'AttributeDefinitions' => [
-                [
-                    'AttributeName' => $fieldName1,
-                    'AttributeType' => 'S',
-                ]
-            ],
-            'ProvisionedThroughput' => [
-                'ReadCapacityUnits' => 5,
-                'WriteCapacityUnits' => 5,
-            ]
-        ])->execute();
+        list($tableName, $fieldName1) = $this->createSimpleTableWithHashKey();
+        
+        $faker = \Faker\Factory::create();
         
         $id = $faker->firstNameFemale;
         $value = [
@@ -197,30 +121,11 @@ class CommandTest extends TestCase
      */
     public function testGetItemUsingCompositeIndexedArrayKeyWithOneElement()
     {
-        $db = $this->getConnection();
-        $command = $db->createCommand();
-        $faker = \Faker\Factory::create();
-        $tableName = $faker->uuid;
-        $fieldName1 = $faker->firstNameMale;
+        $command = $this->createCommand();
         
-        $command->createTable($tableName, [
-            'KeySchema' => [
-                [
-                    'AttributeName' => $fieldName1,
-                    'KeyType' => 'HASH',
-                ]
-            ],
-            'AttributeDefinitions' => [
-                [
-                    'AttributeName' => $fieldName1,
-                    'AttributeType' => 'S',
-                ]
-            ],
-            'ProvisionedThroughput' => [
-                'ReadCapacityUnits' => 5,
-                'WriteCapacityUnits' => 5,
-            ]
-        ])->execute();
+        list($tableName, $fieldName1) = $this->createSimpleTableWithHashKey();
+        
+        $faker = \Faker\Factory::create();
         
         $id = $faker->firstNameFemale;
         $value = [
@@ -239,39 +144,11 @@ class CommandTest extends TestCase
      */
     public function testGetItemUsingCompositeIndexedArrayKeyWithTwoElement()
     {
-        $db = $this->getConnection();
-        $command = $db->createCommand();
-        $faker = \Faker\Factory::create();
-        $tableName = $faker->uuid;
-        $fieldName1 = $faker->firstNameFemale;
-        $fieldName2 = $faker->firstNameFemale;
+        $command = $this->createCommand();
         
-        $command->createTable($tableName, [
-            'KeySchema' => [
-                [
-                    'AttributeName' => $fieldName1,
-                    'KeyType' => 'HASH',
-                ],
-                [
-                    'AttributeName' => $fieldName2,
-                    'KeyType' => 'RANGE',
-                ],
-            ],
-            'AttributeDefinitions' => [
-                [
-                    'AttributeName' => $fieldName1,
-                    'AttributeType' => 'S',
-                ],
-                [
-                    'AttributeName' => $fieldName2,
-                    'AttributeType' => 'S',
-                ]
-            ],
-            'ProvisionedThroughput' => [
-                'ReadCapacityUnits' => 5,
-                'WriteCapacityUnits' => 5,
-            ]
-        ])->execute();
+        list($tableName, $fieldName1, $fieldName2) = $this->createSimpleTableWithHashKeyAndRangeKey();
+        
+        $faker = \Faker\Factory::create();
         
         $id1 = $faker->firstNameFemale;
         $id2 = $faker->firstNameFemale;
@@ -292,30 +169,11 @@ class CommandTest extends TestCase
      */
     public function testGetItemUsingCompositeAssociativeArrayKeyWithOneElement()
     {
-        $db = $this->getConnection();
-        $command = $db->createCommand();
-        $faker = \Faker\Factory::create();
-        $tableName = $faker->uuid;
-        $fieldName1 = $faker->firstNameMale;
+        $command = $this->createCommand();
         
-        $command->createTable($tableName, [
-            'KeySchema' => [
-                [
-                    'AttributeName' => $fieldName1,
-                    'KeyType' => 'HASH',
-                ]
-            ],
-            'AttributeDefinitions' => [
-                [
-                    'AttributeName' => $fieldName1,
-                    'AttributeType' => 'S',
-                ]
-            ],
-            'ProvisionedThroughput' => [
-                'ReadCapacityUnits' => 5,
-                'WriteCapacityUnits' => 5,
-            ]
-        ])->execute();
+        list($tableName, $fieldName1) = $this->createSimpleTableWithHashKey();
+        
+        $faker = \Faker\Factory::create();
         
         $id = $faker->firstNameFemale;
         $value = [
@@ -334,39 +192,11 @@ class CommandTest extends TestCase
      */
     public function testGetItemUsingCompositeAssociativeArrayKeyWithTwoElement()
     {
-        $db = $this->getConnection();
-        $command = $db->createCommand();
-        $faker = \Faker\Factory::create();
-        $tableName = $faker->uuid;
-        $fieldName1 = $faker->firstNameFemale;
-        $fieldName2 = $faker->firstNameFemale;
+        $command = $this->createCommand();
         
-        $command->createTable($tableName, [
-            'KeySchema' => [
-                [
-                    'AttributeName' => $fieldName1,
-                    'KeyType' => 'HASH',
-                ],
-                [
-                    'AttributeName' => $fieldName2,
-                    'KeyType' => 'RANGE',
-                ],
-            ],
-            'AttributeDefinitions' => [
-                [
-                    'AttributeName' => $fieldName1,
-                    'AttributeType' => 'S',
-                ],
-                [
-                    'AttributeName' => $fieldName2,
-                    'AttributeType' => 'S',
-                ]
-            ],
-            'ProvisionedThroughput' => [
-                'ReadCapacityUnits' => 5,
-                'WriteCapacityUnits' => 5,
-            ]
-        ])->execute();
+        list($tableName, $fieldName1, $fieldName2) = $this->createSimpleTableWithHashKeyAndRangeKey();
+        
+        $faker = \Faker\Factory::create();
         
         $id1 = $faker->firstNameFemale;
         $id2 = $faker->firstNameFemale;
@@ -387,30 +217,11 @@ class CommandTest extends TestCase
      */
     public function testBatchGetItemUsingIndexedArrayOfScalarElement()
     {
-        $db = $this->getConnection();
-        $command = $db->createCommand();
-        $faker = \Faker\Factory::create();
-        $tableName = $faker->uuid;
-        $fieldName1 = $faker->firstNameMale;
+        $command = $this->createCommand();
         
-        $command->createTable($tableName, [
-            'KeySchema' => [
-                [
-                    'AttributeName' => $fieldName1,
-                    'KeyType' => 'HASH',
-                ]
-            ],
-            'AttributeDefinitions' => [
-                [
-                    'AttributeName' => $fieldName1,
-                    'AttributeType' => 'S',
-                ]
-            ],
-            'ProvisionedThroughput' => [
-                'ReadCapacityUnits' => 5,
-                'WriteCapacityUnits' => 5,
-            ]
-        ])->execute();
+        list($tableName, $fieldName1) = $this->createSimpleTableWithHashKey();
+        
+        $faker = \Faker\Factory::create();
         
         $ids = array_map(function() use ($faker) {
             return $faker->uuid;
@@ -439,30 +250,11 @@ class CommandTest extends TestCase
      */
     public function testBatchGetItemUsingIndexedArrayOfIndexedArrayOnOneKey()
     {
-        $db = $this->getConnection();
-        $command = $db->createCommand();
-        $faker = \Faker\Factory::create();
-        $tableName = $faker->uuid;
-        $fieldName1 = $faker->firstNameMale;
+        $command = $this->createCommand();
         
-        $command->createTable($tableName, [
-            'KeySchema' => [
-                [
-                    'AttributeName' => $fieldName1,
-                    'KeyType' => 'HASH',
-                ]
-            ],
-            'AttributeDefinitions' => [
-                [
-                    'AttributeName' => $fieldName1,
-                    'AttributeType' => 'S',
-                ]
-            ],
-            'ProvisionedThroughput' => [
-                'ReadCapacityUnits' => 5,
-                'WriteCapacityUnits' => 5,
-            ]
-        ])->execute();
+        list($tableName, $fieldName1) = $this->createSimpleTableWithHashKey();
+        
+        $faker = \Faker\Factory::create();
         
         $ids = array_map(function() use ($faker) {
             return [
@@ -492,39 +284,11 @@ class CommandTest extends TestCase
      */
     public function testBatchGetItemUsingIndexedArrayOfIndexedArrayOnTwoKey()
     {
-        $db = $this->getConnection();
-        $command = $db->createCommand();
-        $faker = \Faker\Factory::create();
-        $tableName = $faker->uuid;
-        $fieldName1 = $faker->firstNameMale;
-        $fieldName2 = $faker->firstNameMale;
+        $command = $this->createCommand();
         
-        $command->createTable($tableName, [
-            'KeySchema' => [
-                [
-                    'AttributeName' => $fieldName1,
-                    'KeyType' => 'HASH',
-                ],
-                [
-                    'AttributeName' => $fieldName2,
-                    'KeyType' => 'RANGE',
-                ]
-            ],
-            'AttributeDefinitions' => [
-                [
-                    'AttributeName' => $fieldName1,
-                    'AttributeType' => 'S',
-                ],
-                [
-                    'AttributeName' => $fieldName2,
-                    'AttributeType' => 'S',
-                ]
-            ],
-            'ProvisionedThroughput' => [
-                'ReadCapacityUnits' => 5,
-                'WriteCapacityUnits' => 5,
-            ]
-        ])->execute();
+        list($tableName, $fieldName1, $fieldName2) = $this->createSimpleTableWithHashKeyAndRangeKey();
+        
+        $faker = \Faker\Factory::create();
         
         $ids = array_map(function() use ($faker) {
             return [
@@ -556,39 +320,11 @@ class CommandTest extends TestCase
      */
     public function testBatchGetItemUsingIndexedArrayOfAssociativeArray()
     {
-        $db = $this->getConnection();
-        $command = $db->createCommand();
-        $faker = \Faker\Factory::create();
-        $tableName = $faker->uuid;
-        $fieldName1 = $faker->firstNameMale;
-        $fieldName2 = $faker->firstNameMale;
+        $command = $this->createCommand();
         
-        $command->createTable($tableName, [
-            'KeySchema' => [
-                [
-                    'AttributeName' => $fieldName1,
-                    'KeyType' => 'HASH',
-                ],
-                [
-                    'AttributeName' => $fieldName2,
-                    'KeyType' => 'RANGE',
-                ]
-            ],
-            'AttributeDefinitions' => [
-                [
-                    'AttributeName' => $fieldName1,
-                    'AttributeType' => 'S',
-                ],
-                [
-                    'AttributeName' => $fieldName2,
-                    'AttributeType' => 'S',
-                ]
-            ],
-            'ProvisionedThroughput' => [
-                'ReadCapacityUnits' => 5,
-                'WriteCapacityUnits' => 5,
-            ]
-        ])->execute();
+        list($tableName, $fieldName1, $fieldName2) = $this->createSimpleTableWithHashKeyAndRangeKey();
+        
+        $faker = \Faker\Factory::create();
         
         $ids = array_map(function() use ($fieldName1, $fieldName2, $faker) {
             return [
@@ -617,39 +353,11 @@ class CommandTest extends TestCase
      */
     public function testBatchGetItemUsingAssociativeArrayOnTwoKeys()
     {
-        $db = $this->getConnection();
-        $command = $db->createCommand();
-        $faker = \Faker\Factory::create();
-        $tableName = $faker->uuid;
-        $fieldName1 = $faker->firstNameMale;
-        $fieldName2 = $faker->firstNameMale;
+        $command = $this->createCommand();
         
-        $command->createTable($tableName, [
-            'KeySchema' => [
-                [
-                    'AttributeName' => $fieldName1,
-                    'KeyType' => 'HASH',
-                ],
-                [
-                    'AttributeName' => $fieldName2,
-                    'KeyType' => 'RANGE',
-                ]
-            ],
-            'AttributeDefinitions' => [
-                [
-                    'AttributeName' => $fieldName1,
-                    'AttributeType' => 'S',
-                ],
-                [
-                    'AttributeName' => $fieldName2,
-                    'AttributeType' => 'S',
-                ]
-            ],
-            'ProvisionedThroughput' => [
-                'ReadCapacityUnits' => 5,
-                'WriteCapacityUnits' => 5,
-            ]
-        ])->execute();
+        list($tableName, $fieldName1, $fieldName2) = $this->createSimpleTableWithHashKeyAndRangeKey();
+        
+        $faker = \Faker\Factory::create();
         
         $ids = [];
         $values = [];
@@ -680,30 +388,11 @@ class CommandTest extends TestCase
      */
     public function testScan()
     {
-        $db = $this->getConnection();
-        $command = $db->createCommand();
-        $faker = \Faker\Factory::create();
-        $tableName = $faker->uuid;
-        $fieldName1 = $faker->firstNameMale;
+        $command = $this->createCommand();
         
-        $command->createTable($tableName, [
-            'KeySchema' => [
-                [
-                    'AttributeName' => $fieldName1,
-                    'KeyType' => 'HASH',
-                ]
-            ],
-            'AttributeDefinitions' => [
-                [
-                    'AttributeName' => $fieldName1,
-                    'AttributeType' => 'S',
-                ]
-            ],
-            'ProvisionedThroughput' => [
-                'ReadCapacityUnits' => 5,
-                'WriteCapacityUnits' => 5,
-            ]
-        ])->execute();
+        list($tableName, $fieldName1) = $this->createSimpleTableWithHashKey();
+        
+        $faker = \Faker\Factory::create();
         
         foreach (range(1, 10) as $i) {
             $command->putItem($tableName, [
@@ -768,6 +457,68 @@ class CommandTest extends TestCase
         
         $this->assertNotEmpty($result5);
         $this->assertEquals(1, $result5['Count']);
+    }
+
+    /**
+     * @group batchPutItem
+     */
+    public function testBatchPutItem()
+    {
+        $command = $this->createCommand();
+        
+        list($tableName, $fieldName1) = $this->createSimpleTableWithHashKey();
+        
+        $faker = \Faker\Factory::create();
+        
+        $ids = array_map(function() use ($faker) {
+            return $faker->uuid;
+        }, range(1, 10));
+        
+        $values = array_map(function($id) use ($fieldName1, $faker) {
+            return [
+                $fieldName1 => $id,
+                'Field2' => $faker->firstName,
+            ];
+        }, $ids);
+        
+        $command->batchPutItem($tableName, $values)->execute();
+        
+        $this->assertEquals(10, $this->getTableItemCount($tableName));
+    }
+    
+    /**
+     * @group batchDeleteItem
+     */
+    public function testBatchDeleteItem()
+    {
+        $command = $this->createCommand();
+        
+        list($tableName, $fieldName1) = $this->createSimpleTableWithHashKey();
+        
+        $faker = \Faker\Factory::create();
+        
+        $ids = array_map(function() use ($faker) {
+            return $faker->uuid;
+        }, range(1, 10));
+        
+        $values = array_map(function($id) use ($fieldName1, $faker) {
+            return [
+                $fieldName1 => $id,
+                'Field2' => $faker->firstName,
+            ];
+        }, $ids);
+        
+        $command->batchPutItem($tableName, $values)->execute();
+        
+        $this->assertEquals(10, $this->getTableItemCount($tableName));
+        
+        $keys = array_slice(array_map(function($value) use ($fieldName1) {
+            return $value[$fieldName1];
+        }, $values), 0, 5);
+        
+        $command->batchDeleteItem($tableName, $keys)->execute();
+        
+        $this->assertEquals(5, $this->getTableItemCount($tableName));
     }
 }
 

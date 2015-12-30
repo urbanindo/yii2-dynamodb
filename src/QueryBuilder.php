@@ -8,7 +8,6 @@
 namespace UrbanIndo\Yii2\DynamoDb;
 
 use yii\base\Object;
-use Aws\DynamoDb\Marshaler;
 use yii\helpers\ArrayHelper;
 
 /**
@@ -100,11 +99,10 @@ class QueryBuilder extends Object
      */
     public function putItem($table, array $value, array $options = [])
     {
-        $marshaler = new Marshaler();
         $name = 'PutItem';
         $argument = array_merge([
             'TableName' => $table,
-            'Item' => $marshaler->marshalItem($value)
+            'Item' => Marshaler::marshalItem($value),
         ], $options);
         return [$name, $argument];
     }
@@ -151,13 +149,12 @@ class QueryBuilder extends Object
      */
     public function buildGetItemScalarKey(array $keySchema, $key)
     {
-        $marshaler = new Marshaler();
         if (count($keySchema) > 1) {
             throw new \InvalidArgumentException('Can not use scalar key argument on table with multiple key');
         }
         $keyName = $keySchema[0]['AttributeName'];
         return [
-            $keyName => $marshaler->marshalValue($key),
+            $keyName => Marshaler::marshalValue($key),
         ];
     }
     
@@ -168,16 +165,14 @@ class QueryBuilder extends Object
      */
     public function buildGetItemCompositeKey(array $keySchema, array $keys)
     {
-        $marshaler = new Marshaler();
-        
         $keyArgument = [];
         if (ArrayHelper::isIndexed($keys)) {
             foreach ($keys as $i => $value) {
-                $keyArgument[$keySchema[$i]['AttributeName']] = $marshaler->marshalValue($value);
+                $keyArgument[$keySchema[$i]['AttributeName']] = Marshaler::marshalValue($value);
             }
         } else {
             foreach ($keys as $i => $value) {
-                $keyArgument[$i] = $marshaler->marshalValue($value);
+                $keyArgument[$i] = Marshaler::marshalValue($value);
             }
         }
         return $keyArgument;
@@ -230,25 +225,9 @@ class QueryBuilder extends Object
     {
         $name = 'BatchGetItem';
         
-        $tableDescription = $this->db->createCommand()->describeTable($table)->execute();
-        $keySchema = $tableDescription['Table']['KeySchema'];
-        
-        if (ArrayHelper::isIndexed($keys)) {
-            $isScalar = is_string($keys[0]) || is_numeric($keys[0]);
-            if ($isScalar) {
-                $keyArgument = $this->buildBatchGetItemFromIndexedArrayOfScalar($keySchema, $keys);
-            } elseif (ArrayHelper::isIndexed($keys[0])) {
-                $keyArgument = $this->buildBatchGetItemFromIndexedArrayOfIndexedArray($keySchema, $keys);
-            } else {
-                $keyArgument = $this->buildBatchGetItemFromIndexedArrayOfAssociativeArray($keySchema, $keys);
-            }
-        } else {
-            $keyArgument = $this->buildBatchGetItemFromAssociativeArray($keySchema, $keys);
-        }
-        
         $tableArgument = array_merge([
             $table => [
-                    'Keys' => $keyArgument
+                    'Keys' => $this->buildBatchKeyArgument($table, $keys),
             ]
         ], $requestItemOptions);
         
@@ -257,21 +236,45 @@ class QueryBuilder extends Object
     }
     
     /**
+     * Resolve the keys into `BatchGetItem` eligible argument.
+     * @param string $table The name of the table.
+     * @param array  $keys  The keys.
+     * @return array
+     */
+    private function buildBatchKeyArgument($table, $keys)
+    {
+        $tableDescription = $this->db->createCommand()->describeTable($table)->execute();
+        $keySchema = $tableDescription['Table']['KeySchema'];
+        
+        if (ArrayHelper::isIndexed($keys)) {
+            $isScalar = is_string($keys[0]) || is_numeric($keys[0]);
+            if ($isScalar) {
+                return $this->buildBatchKeyArgumentFromIndexedArrayOfScalar($keySchema, $keys);
+            } elseif (ArrayHelper::isIndexed($keys[0])) {
+                return $this->buildBatchKeyArgumentFromIndexedArrayOfIndexedArray($keySchema, $keys);
+            } else {
+                return $this->buildBatchKeyArgumentFromIndexedArrayOfAssociativeArray($keySchema, $keys);
+            }
+        } else {
+            return $this->buildBatchGetItemFromAssociativeArray($keySchema, $keys);
+        }
+    }
+    
+    /**
      * @param array $keySchema The KeySchema of the table.
      * @param array $keys      Indexed array of scalar element.
      * @return array
      * @throws \InvalidArgumentException When the table has multiple key.
      */
-    public function buildBatchGetItemFromIndexedArrayOfScalar(array $keySchema, array $keys)
+    private function buildBatchKeyArgumentFromIndexedArrayOfScalar(array $keySchema, array $keys)
     {
-        $marshaler = new Marshaler();
         if (count($keySchema) > 1) {
             throw new \InvalidArgumentException('Can not use scalar key argument on table with multiple key');
         }
         $attribute = $keySchema[0]['AttributeName'];
-        return array_map(function ($key) use ($attribute, $marshaler) {
+        return array_map(function ($key) use ($attribute) {
             return [
-                $attribute => $marshaler->marshalValue($key),
+                $attribute => Marshaler::marshalValue($key),
             ];
         }, $keys);
     }
@@ -282,13 +285,12 @@ class QueryBuilder extends Object
      * @return array
      * @throws \InvalidArgumentException When the table has multiple key.
      */
-    public function buildBatchGetItemFromIndexedArrayOfIndexedArray(array $keySchema, array $keys)
+    private function buildBatchKeyArgumentFromIndexedArrayOfIndexedArray(array $keySchema, array $keys)
     {
-        $marshaler = new Marshaler();
-        return array_map(function ($key) use ($keySchema, $marshaler) {
+        return array_map(function ($key) use ($keySchema) {
             $return = [];
             foreach ($key as $i => $value) {
-                $return[$keySchema[$i]['AttributeName']] = $marshaler->marshalValue($value);
+                $return[$keySchema[$i]['AttributeName']] = Marshaler::marshalValue($value);
             }
             return $return;
         }, $keys);
@@ -300,14 +302,13 @@ class QueryBuilder extends Object
      * @return array
      * @throws \InvalidArgumentException When the table has multiple key.
      */
-    public function buildBatchGetItemFromIndexedArrayOfAssociativeArray(array $keySchema, array $keys)
+    private function buildBatchKeyArgumentFromIndexedArrayOfAssociativeArray(array $keySchema, array $keys)
     {
-        $marshaler = new Marshaler();
         $keySchema;
-        return array_map(function ($key) use ($marshaler) {
+        return array_map(function ($key) {
             $return = [];
             foreach ($key as $i => $value) {
-                $return[$i] = $marshaler->marshalValue($value);
+                $return[$i] = Marshaler::marshalValue($value);
             }
             return $return;
         }, $keys);
@@ -336,7 +337,7 @@ class QueryBuilder extends Object
                 $indexedKey[$k][$attribute] = $keys[$attribute][$k];
             }
         }
-        return $this->buildBatchGetItemFromIndexedArrayOfAssociativeArray($keySchema, $indexedKey);
+        return $this->buildBatchKeyArgumentFromIndexedArrayOfAssociativeArray($keySchema, $indexedKey);
     }
     
     /**
@@ -370,6 +371,96 @@ class QueryBuilder extends Object
         $argument = array_merge([
             'TableName' => $table,
         ], $options);
+        return [$name, $argument];
+    }
+    
+    /**
+     * Builds a DynamoDB command to put multiple items.
+     *
+     * @param string $table   The name of the table to be created.
+     * @param array  $values  The value to put into the table.
+     * @param array  $options The value to put into the table.
+     * @return array The create table request syntax. The first element is the name of the command,
+     * the second is the argument.
+     */
+    public function batchPutItem($table, array $values, array $options = [])
+    {
+        $name = 'BatchWriteItem';
+        $requests = array_map(function ($value) {
+            return [
+                'PutRequest' => [
+                    'Item' => Marshaler::marshalItem($value),
+                ]
+            ];
+        }, $values);
+        $argument = array_merge([
+            'RequestItems' => [
+                $table => $requests,
+            ]
+        ], $options);
+        return [$name, $argument];
+    }
+    
+    /**
+     * Builds a DynamoDB command for batch delete item.
+     *
+     * @param string $table   The name of the table to be created.
+     * @param array  $keys    The keys of the row to get.
+     * This can be
+     * 1) indexed array of scalar value for table with single key,
+     *
+     * e.g. ['value1', 'value2', 'value3', 'value4']
+     *
+     * 2) indexed array of array of scalar value for table with multiple key,
+     *
+     * e.g. [
+     *  ['value11', 'value12'],
+     *  ['value21', 'value22'],
+     *  ['value31', 'value32'],
+     *  ['value41', 'value42'],
+     * ]
+     *
+     * The first scalar will be the primary (or hash) key, the second will be the
+     * secondary (or range) key.
+     *
+     * 3) indexed array of associative array
+     *
+     * e.g. [
+     *  ['attribute1' => 'value11', 'attribute2' => 'value12'],
+     *  ['attribute1' => 'value21', 'attribute2' => 'value22'],
+     *  ['attribute1' => 'value31', 'attribute2' => 'value32'],
+     *  ['attribute1' => 'value41', 'attribute2' => 'value42'],
+     * ]
+     *
+     * 4) or associative of scalar values.
+     *
+     * e.g. [
+     *  'attribute1' => ['value11', 'value21', 'value31', 'value41']
+     *  'attribute2' => ['value12', 'value22', 'value32', 'value42']
+     * ].
+     *
+     * @param array  $options Additional options for the final argument.
+     * @return array The create table request syntax. The first element is the name of the command,
+     * the second is the argument.
+     */
+    public function batchDeleteItem($table, array $keys, array $options = [])
+    {
+        $name = 'BatchWriteItem';
+        $keyArgument = $this->buildBatchKeyArgument($table, $keys);
+        $deleteRequests = array_map(function ($key) {
+            return [
+                'DeleteRequest' => [
+                    'Key' => $key,
+                ]
+            ];
+        }, $keyArgument);
+        
+        $argument = array_merge([
+            'RequestItems' => [
+                $table => $deleteRequests,
+            ]
+        ], $options);
+        
         return [$name, $argument];
     }
 }

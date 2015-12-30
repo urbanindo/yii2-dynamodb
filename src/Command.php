@@ -134,6 +134,34 @@ class Command extends Object
     }
     
     /**
+     * Put multiple items in the table.
+     * @param string $table   The name of the table.
+     * @param array  $values  The values to input.
+     * @param array  $options Additional options to the request argument.
+     * @return static
+     */
+    public function batchPutItem($table, array $values, array $options = [])
+    {
+        list($name, $argument) = $this->db->getQueryBuilder()->batchPutItem($table, $values, $options);
+        return $this->setCommand($name, $argument);
+    }
+    
+    /**
+     * Put multiple items in the table.
+     * @param string $table   The name of the table.
+     * @param array  $keys    The keys of the row. This can be indexed array of
+     * scalar value, indexed array of array of scalar value, indexed array of
+     * associative array.
+     * @param array  $options Additional options to the request argument.
+     * @return static
+     */
+    public function batchDeleteItem($table, array $keys, array $options = [])
+    {
+        list($name, $argument) = $this->db->getQueryBuilder()->batchDeleteItem($table, $keys, $options);
+        return $this->setCommand($name, $argument);
+    }
+    
+    /**
      * Get a single item from table.
      * @param string $table   The name of the table.
      * @param mixed  $key     The key of the row.

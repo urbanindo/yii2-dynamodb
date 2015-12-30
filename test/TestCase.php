@@ -13,6 +13,82 @@ abstract class TestCase extends \PHPUnit_Framework_TestCase
         return Yii::$app->dynamodb;
     }
     
+    /**
+     * @return \UrbanIndo\Yii2\DynamoDb\Command
+     */
+    public function createCommand()
+    {
+        return $this->getConnection()->createCommand();
+    }
+    
+    
+    public function createSimpleTableWithHashKey()
+    {
+        $command = $this->createCommand();
+        $faker = \Faker\Factory::create();
+        $tableName = $faker->uuid;
+        $fieldName1 = $faker->firstNameMale;
+        
+        $command->createTable($tableName, [
+            'KeySchema' => [
+                [
+                    'AttributeName' => $fieldName1,
+                    'KeyType' => 'HASH',
+                ]
+            ],
+            'AttributeDefinitions' => [
+                [
+                    'AttributeName' => $fieldName1,
+                    'AttributeType' => 'S',
+                ]
+            ],
+            'ProvisionedThroughput' => [
+                'ReadCapacityUnits' => 5,
+                'WriteCapacityUnits' => 5,
+            ]
+        ])->execute();
+        
+        return [$tableName, $fieldName1];
+    }
+    
+    public function createSimpleTableWithHashKeyAndRangeKey()
+    {
+        $command = $this->createCommand();
+        $faker = \Faker\Factory::create();
+        $tableName = $faker->uuid;
+        $fieldName1 = $faker->firstNameMale;
+        $fieldName2 = $faker->firstNameMale;
+        
+        $command->createTable($tableName, [
+            'KeySchema' => [
+                [
+                    'AttributeName' => $fieldName1,
+                    'KeyType' => 'HASH',
+                ],
+                [
+                    'AttributeName' => $fieldName2,
+                    'KeyType' => 'RANGE',
+                ]
+            ],
+            'AttributeDefinitions' => [
+                [
+                    'AttributeName' => $fieldName1,
+                    'AttributeType' => 'S',
+                ],
+                [
+                    'AttributeName' => $fieldName2,
+                    'AttributeType' => 'S',
+                ]
+            ],
+            'ProvisionedThroughput' => [
+                'ReadCapacityUnits' => 5,
+                'WriteCapacityUnits' => 5,
+            ]
+        ])->execute();
+        
+        return [$tableName, $fieldName1, $fieldName2];
+    }
+    
     protected function mockWebApplication($config = [], $appClass = '\yii\web\Application')
     {
         new $appClass(ArrayHelper::merge([
