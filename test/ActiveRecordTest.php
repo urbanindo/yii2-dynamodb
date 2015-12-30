@@ -2,8 +2,37 @@
 
 class ActiveRecordTest extends TestCase {
     
+    protected function setUp() {
+        parent::setUp();
+        $command = $this->getConnection()->createCommand();
+        /* @var $command \UrbanIndo\Yii2\DynamoDb\Command */
+        $table = \test\data\Customer::tableName();
+        if ($command->tableExists($table)) {
+            $command->deleteTable($table)->execute();
+        }
+        $command->createTable($table, [
+            'AttributeDefinitions' => [
+                [
+                    'AttributeName' => 'id',
+                    'AttributeType' => 'N'
+                ]
+            ],
+            'KeySchema' => [
+                [
+                    'AttributeName' => 'id',
+                    'KeyType' => 'HASH',
+                ]
+            ],
+            'ProvisionedThroughput' => [
+                'ReadCapacityUnits' => 10,
+                'WriteCapacityUnits' => 10
+            ]
+        ])->execute();
+    }
+    
     public function testInsertAndFindOne() {
         
+        $this->assertEquals(0, $this->getTableItemCount(\test\data\Customer::tableName()));
         $objectToInsert = new \test\data\Customer();
         $id = (int) \Faker\Provider\Base::randomNumber(5);
         $faker = \Faker\Factory::create();
@@ -27,13 +56,7 @@ class ActiveRecordTest extends TestCase {
         ];
         
         $this->assertTrue($objectToInsert->save(false));
-        $objectFromFind = \test\data\Customer::findOne(['id' => $id]);
-       
-        /* @var $objectFromFind data\Customer */
-        $this->assertNotNull($objectFromFind);
-        $this->assertEquals($id, $objectFromFind->id);
-        $this->assertEquals($objectToInsert->name, $objectFromFind->name);
-        $this->assertEquals($objectToInsert->kids, $objectFromFind->kids);
+        $this->assertEquals(1, $this->getTableItemCount(\test\data\Customer::tableName()));
     }
     
     public function testInsertAndFindAll() {
@@ -90,7 +113,7 @@ class ActiveRecordTest extends TestCase {
         
         $this->assertTrue($objectToInsert2->save(false));
         
-         $objectsFromFind2 = \test\data\Customer::findAll(['id' => [$id1, $id2]]);
+        $objectsFromFind2 = \test\data\Customer::findAll(['id' => [$id1, $id2]]);
          
          /* @var $objectFromFind data\Customer */
         $this->assertEquals(2, count($objectsFromFind2));

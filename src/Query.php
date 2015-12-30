@@ -51,6 +51,11 @@ class Query extends Component implements QueryInterface
      * This will try to detect the auto.
      */
     const USING_AUTO = 'Auto';
+    
+    /**
+     * The name of the key of the row to store the response data.
+     */
+    const RESPONSE_KEY_PARAM = '_response';
 
     /**
      * Array of attributes being selected. It will be used to build Projection Expression.
@@ -89,14 +94,6 @@ class Query extends Component implements QueryInterface
      * @var array|boolean
      */
     public $storeResponseData = ['ConsumedCapacity', 'LastEvaluatedKey', 'ScannedCount', 'Count'];
-    
-    /**
-     * The key to store the response data. When populating the values of the response data for
-     * keys listed in [[storeResponseData]] will be stored on each row returned on the key
-     * stated in this variable.
-     * @var string
-     */
-    public $responseDataKeyParam = '_response';
 
     /**
      * Creates a DB command that can be used to execute this query.
@@ -236,7 +233,7 @@ class Query extends Component implements QueryInterface
         $storedResponse = self::extractStoredResponseData($this->storeResponseData, $response);
         if (!empty($storedResponse)) {
             $rows = array_map(function ($row) use ($storedResponse) {
-                $row[$this->responseDataKeyParam] = $storedResponse;
+                $row[self::RESPONSE_KEY_PARAM] = $storedResponse;
                 return $row;
             }, $rows);
         }

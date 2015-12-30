@@ -21,6 +21,11 @@ abstract class TestCase extends \PHPUnit_Framework_TestCase
         return $this->getConnection()->createCommand();
     }
     
+    public function getTableItemCount($tableName) {
+        $tableDescription = $this->getConnection()->createCommand()->describeTable($tableName)->execute();
+        return $tableDescription['Table']['ItemCount'];
+    }
+    
     
     public function createSimpleTableWithHashKey()
     {

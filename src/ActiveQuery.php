@@ -81,6 +81,8 @@ class ActiveQuery extends Query implements ActiveQueryInterface
         $models = $this->createModels($rows);
         if (!$this->asArray) {
             foreach ($models as $model) {
+                /* @var $model ActiveRecord */
+                $model->setFindType($this->using);
                 $model->afterFind();
             }
         }

@@ -74,12 +74,13 @@ class ActiveDataProvider extends \yii\data\BaseDataProvider
     /**
      * Prepares the data models that will be made available in the current page.
      * @return array the available data models
-     * @throws \yii\base\InvalidConfigException If the query is not class of UrbanIndo\Yii2\DynamoDb\Query
+     * @throws InvalidConfigException If the query is not class of UrbanIndo\Yii2\DynamoDb\Query.
      */
     protected function prepareModels()
     {
         if (!$this->query instanceof Query) {
-            throw new InvalidConfigException('The "query" property must be an instance of a class that implements the UrbanIndo\Yii2\DynamoDb\Query or its subclasses.');
+            throw new InvalidConfigException('The "query" property must be an instance of a class that '.
+                                             'implements the UrbanIndo\Yii2\DynamoDb\Query or its subclasses.');
         }
         $query = clone $this->query;
         if (($pagination = $this->getPagination()) !== false) {
@@ -101,11 +102,13 @@ class ActiveDataProvider extends \yii\data\BaseDataProvider
     /**
      * Returns a value indicating the total number of data models in this data provider.
      * @return integer total number of data models in this data provider.
+     * @throws InvalidConfigException When the query is not istance of UrbanIndo\Yii2\DynamoDb\Query.
      */
     protected function prepareTotalCount()
     {
         if (!$this->query instanceof Query) {
-            throw new InvalidConfigException('The "query" property must be an instance of a class that implements the UrbanIndo\Yii2\DynamoDb\Query or its subclasses.');
+            throw new InvalidConfigException('The "query" property must be an instance of a class'.
+                        ' that implements the UrbanIndo\Yii2\DynamoDb\Query or its subclasses.');
         }
         $query = clone $this->query;
         return (int) $query->limit(-1)->orderBy([])->count('*', $this->db);
@@ -128,7 +131,7 @@ class ActiveDataProvider extends \yii\data\BaseDataProvider
     
     /**
      * Sets the pagination for this data provider.
-     * @param array|Pagination|boolean $value the pagination to be used by this data provider.
+     * @param array|Pagination|boolean $value The pagination to be used by this data provider.
      * This can be one of the following:
      *
      * - a configuration array for creating the pagination object. The "class" element defaults
@@ -136,7 +139,8 @@ class ActiveDataProvider extends \yii\data\BaseDataProvider
      * - an instance of [[Pagination]] or its subclass
      * - false, if pagination needs to be disabled.
      *
-     * @throws InvalidParamException
+     * @throws InvalidParamException When the value is not Pagination instance.
+     * @return void
      */
     public function setPagination($value)
     {

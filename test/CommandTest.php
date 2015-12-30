@@ -87,11 +87,6 @@ class CommandTest extends TestCase
         $this->assertEquals(2, $this->getTableItemCount($tableName));
     }
     
-    private function getTableItemCount($tableName) {
-        $tableDescription = $this->getConnection()->createCommand()->describeTable($tableName)->execute();
-        return $tableDescription['Table']['ItemCount'];
-    }
-    
     /**
      * @group getItem
      */

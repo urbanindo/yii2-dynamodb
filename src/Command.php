@@ -104,6 +104,16 @@ class Command extends Object
         list($name, $argument) = $this->db->getQueryBuilder()->describeTable($table);
         return $this->setCommand($name, $argument);
     }
+    
+    /**
+     * @param string $table The name of the table.
+     * @return integer
+     */
+    public function getTableItemCount($table)
+    {
+        $description = $this->describeTable($table)->execute();
+        return $description['Table']['ItemCount'];
+    }
 
     /**
      * Return whether a table exists or not.

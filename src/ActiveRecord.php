@@ -10,6 +10,7 @@ use Yii;
 use yii\db\BaseActiveRecord;
 use yii\helpers\Inflector;
 use yii\helpers\StringHelper;
+use yii\helpers\ArrayHelper;
 
 /**
  * ActiveRecord is the base class for classes representing relational data in terms of objects.
@@ -97,9 +98,9 @@ class ActiveRecord extends BaseActiveRecord
      */
     public static function find(array $options = [])
     {
-        return Yii::createObject(ActiveQuery::className(), array_merge($options, [
-            'class' => get_called_class()
-        ]));
+        return Yii::createObject(ActiveQuery::className(), array_merge([
+            get_called_class(),
+        ], $options));
     }
 
     /**
@@ -137,7 +138,7 @@ class ActiveRecord extends BaseActiveRecord
      *
      * @return boolean whether the attributes are valid and the record is inserted successfully.
      */
-    public function insert($runValidation = true, array $attributes = null)
+    public function insert($runValidation = true, $attributes = null)
     {
         if ($runValidation && !$this->validate($attributes)) {
             Yii::info('Model not inserted due to validation error.', __METHOD__);
@@ -148,13 +149,13 @@ class ActiveRecord extends BaseActiveRecord
         }
         $values = $this->getDirtyAttributes($attributes);
 
-        $ret = $this->getDb()->createCommand()->insert($this->tableName(), $values);
+        $ret = $this->getDb()->createCommand()->putItem($this->tableName(), $values)->execute();
 
         $changedAttributes = array_fill_keys(array_keys($values), null);
         $this->setOldAttributes($values);
         $this->afterSave(true, $changedAttributes);
 
-        return $ret;
+        return true;
     }
 
     /**
@@ -203,7 +204,7 @@ class ActiveRecord extends BaseActiveRecord
      * @param array $options   Additional attribute.
      * @return static
      */
-    public static function findOne($condition, array $options = null)
+    public static function findOne($condition, array $options = [])
     {
         return self::find($options)->where($condition)->one();
     }
@@ -214,11 +215,8 @@ class ActiveRecord extends BaseActiveRecord
      * @param array $options   Additional attribute for the query class.
      * @return static[]
      */
-    public static function findAll($condition, array $options = null)
+    public static function findAll($condition, array $options = [])
     {
-        if ($options == null) {
-            $options = ['using' => Query::USING_BATCH_GET_ITEM];
-        }
         return self::find($options)->where($condition)->all();
     }
 
@@ -235,7 +233,7 @@ class ActiveRecord extends BaseActiveRecord
      * @return void
      * @throws \yii\base\NotSupportedException Not implemented yet.
      */
-    public static function updateAll(array $attributes, $condition = '')
+    public static function updateAll($attributes, $condition = '')
     {
         throw new \yii\base\NotSupportedException(__METHOD__ . ' is not supported.');
     }
@@ -254,7 +252,7 @@ class ActiveRecord extends BaseActiveRecord
      * @return void
      * @throws \yii\base\NotSupportedException Not implemented yet.
      */
-    public static function updateAllCounters(array $counters, $condition = '')
+    public static function updateAllCounters($counters, $condition = '')
     {
         throw new \yii\base\NotSupportedException(__METHOD__ . ' is not supported.');
     }
@@ -274,26 +272,41 @@ class ActiveRecord extends BaseActiveRecord
      * @return void
      * @throws \yii\base\NotSupportedException Not implemented yet.
      */
-    public static function deleteAll($condition = '', array $params = [])
+    public static function deleteAll($condition = '', $params = [])
     {
         throw new \yii\base\NotSupportedException(__METHOD__ . ' is not supported.');
     }
     
     /**
-     * Populate active records from query response.
-     * @param ActiveQuery $query The query that produces the records.
-     * @param array $response    The operation response.
-     * @return static[]
+     * Populates an active record object using a row of data from the database/storage.
+     *
+     * This is an internal method meant to be called to create active record objects after
+     * fetching data from the database. It is mainly used by [[ActiveQuery]] to populate
+     * the query results into active records.
+     *
+     * When calling this method manually you should call [[afterFind()]] on the created
+     * record to trigger the [[EVENT_AFTER_FIND|afterFind Event]].
+     *
+     * @param static $record The record to be populated. In most cases this will be an instance
+     * created by [[instantiate()]] beforehand.
+     * @param array  $row    Attribute values (name => value).
+     * @return void
      */
-    public static function populateRecords(ActiveQuery $query, array $response)
+    public static function populateRecord($record, $row)
     {
-        $this->_findType = $query->using;
+        $responseData = ArrayHelper::getValue($row, Query::RESPONSE_KEY_PARAM);
+        unset($row[Query::RESPONSE_KEY_PARAM]);
+        parent::populateRecord($record, $row);
+        
+        if (!empty($responseData)) {
+            $record->_responseData = $responseData;
+        }
     }
     
     /**
-     * Returns the response meta data from BatchGetItem, GetItem, Scan, or Query 
-     * operation. This can contains `ConsumedCapacity`, `UnprocessedKeys`, `Count`, 
-     * `LastEvaluatedKey`, `ScannedCount` depends on whether the query enables 
+     * Returns the response meta data from BatchGetItem, GetItem, Scan, or Query
+     * operation. This can contains `ConsumedCapacity`, `UnprocessedKeys`, `Count`,
+     * `LastEvaluatedKey`, `ScannedCount` depends on whether the query enables
      * storing the meta data.
      * @return array
      */
@@ -302,5 +315,34 @@ class ActiveRecord extends BaseActiveRecord
         return $this->_responseData;
     }
     
+    /**
+     * Sets the method how the active record was retrieved. Valid values are
+     * <ul>
+     *  <li>Query::USING_BATCH_GET_ITEM</li>
+     *  <li>Query::USING_GET_ITEM</li>
+     *  <li>Query::USING_QUERY</li>
+     *  <li>Query::USING_SCAN</li>
+     * </ul>
+     * @param string $type The type.
+     * @return void
+     */
+    public function setFindType($type)
+    {
+        $this->_findType = $type;
+    }
     
+    /**
+     * Returns the method how the active record was retrieved. Valid values are
+     * <ul>
+     *  <li>Query::USING_BATCH_GET_ITEM</li>
+     *  <li>Query::USING_GET_ITEM</li>
+     *  <li>Query::USING_QUERY</li>
+     *  <li>Query::USING_SCAN</li>
+     * </ul>.
+     * @return string
+     */
+    public function getFindType()
+    {
+        return $this->_findType;
+    }
 }
