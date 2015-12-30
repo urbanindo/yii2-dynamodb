@@ -145,18 +145,27 @@ class QueryBuilderTest extends TestCase
         $id = $faker->firstNameFemale;
         $query1 = $this->createQueryGetItem()->where(['id' => $id]);
         $query2 = $this->createQueryGetItem()->where($id);
+        $query3 = $this->createQueryGetItem()->where($id)->withConsistentRead();
+        $query4 = $this->createQueryGetItem()->where($id)->withoutConsistentRead();
+        $query5 = $this->createQueryGetItem()->where($id)->setConsumedCapacity('NONE');
 
         $expected = [
             'TableName' => Customer::tableName(),
             'Key' => [
                 'id' => ['S' => $id]
-            ],
-            'ConsistentRead' => false,
-            'ReturnConsumedCapacity' => false,
+            ]
         ];
 
         $this->assertEquals($expected, $qb->build($query1)[1]);
         $this->assertEquals($expected, $qb->build($query2)[1]);
+
+        $expected['ConsistentRead'] = true;
+        $this->assertEquals($expected, $qb->build($query3)[1]);
+        $expected['ConsistentRead'] = false;
+        $this->assertEquals($expected, $qb->build($query4)[1]);
+        unset($expected['ConsistentRead']);
+        $expected['ReturnConsumedCapacity'] = 'NONE';
+        $this->assertEquals($expected, $qb->build($query5)[1]);
     }
 
     /**
@@ -176,8 +185,6 @@ class QueryBuilderTest extends TestCase
             'Key' => [
                 'id' => ['S' => $id]
             ],
-            'ConsistentRead' => false,
-            'ReturnConsumedCapacity' => false,
             'ProjectionExpression' => 'id, name, contacts',
         ];
 
@@ -195,6 +202,9 @@ class QueryBuilderTest extends TestCase
         $id = $faker->firstNameFemale;
         $query1 = $this->createQueryGetBatchItem()->where(['id' => $id]);
         $query2 = $this->createQueryGetBatchItem()->where($id);
+        $query3 = $this->createQueryGetBatchItem()->where($id)->withConsistentRead();
+        $query4 = $this->createQueryGetBatchItem()->where($id)->withoutConsistentRead();
+        $query5 = $this->createQueryGetBatchItem()->where($id)->setConsumedCapacity('NONE');
 
         $expected = [
             'RequestItems' => [
@@ -204,14 +214,20 @@ class QueryBuilderTest extends TestCase
                             'id' => ['S' => $id]
                         ]
                     ],
-                    'ConsistentRead' => false,
-                    'ReturnConsumedCapacity' => false,
                 ]
             ]
         ];
 
         $this->assertEquals($expected, $qb->build($query1)[1]);
         $this->assertEquals($expected, $qb->build($query2)[1]);
+
+        $expected['RequestItems'][Customer::tableName()]['ConsistentRead'] = true;
+        $this->assertEquals($expected, $qb->build($query3)[1]);
+        $expected['RequestItems'][Customer::tableName()]['ConsistentRead'] = false;
+        $this->assertEquals($expected, $qb->build($query4)[1]);
+        unset($expected['RequestItems'][Customer::tableName()]['ConsistentRead']);
+        $expected['RequestItems'][Customer::tableName()]['ReturnConsumedCapacity'] = 'NONE';
+        $this->assertEquals($expected, $qb->build($query5)[1]);
     }
 
     /**
@@ -241,9 +257,7 @@ class QueryBuilderTest extends TestCase
                         [
                             'id' => ['S' => $id3]
                         ]
-                    ],
-                    'ConsistentRead' => false,
-                    'ReturnConsumedCapacity' => false,
+                    ]
                 ]
             ]
         ];
@@ -280,8 +294,6 @@ class QueryBuilderTest extends TestCase
                             'id' => ['S' => $id3]
                         ]
                     ],
-                    'ConsistentRead' => false,
-                    'ReturnConsumedCapacity' => false,
                     'ProjectionExpression' => 'id, name, contacts',
                 ]
             ]
@@ -301,8 +313,6 @@ class QueryBuilderTest extends TestCase
 
         $expected = [
             'TableName' => Customer::tableName(),
-            'ConsistentRead' => false,
-            'ReturnConsumedCapacity' => false,
         ];
 
         $this->assertEquals($expected, $qb->build($query1)[1]);
@@ -318,6 +328,9 @@ class QueryBuilderTest extends TestCase
         $faker = \Faker\Factory::create();
         $id = $faker->firstNameFemale;
         $query1 = $this->createQueryScan()->where(['id' => $id]);
+        $query2 = $this->createQueryScan()->where(['id' => $id])->withConsistentRead();
+        $query3 = $this->createQueryScan()->where(['id' => $id])->withoutConsistentRead();
+        $query4 = $this->createQueryScan()->where(['id' => $id])->setConsumedCapacity('NONE');
 
         $expected = [
             'TableName' => Customer::tableName(),
@@ -325,11 +338,17 @@ class QueryBuilderTest extends TestCase
             'ExpressionAttributeValues' => [
                 ':dqp0' => ['S' => $id]
             ],
-            'ConsistentRead' => false,
-            'ReturnConsumedCapacity' => false,
         ];
 
         $this->assertEquals($expected, $qb->build($query1)[1]);
+
+        $expected['ConsistentRead'] = true;
+        $this->assertEquals($expected, $qb->build($query2)[1]);
+        $expected['ConsistentRead'] = false;
+        $this->assertEquals($expected, $qb->build($query3)[1]);
+        unset($expected['ConsistentRead']);
+        $expected['ReturnConsumedCapacity'] = 'NONE';
+        $this->assertEquals($expected, $qb->build($query4)[1]);
     }
 
     /**
@@ -351,8 +370,6 @@ class QueryBuilderTest extends TestCase
             'ExpressionAttributeValues' => [
                 ':dqp0' => ['S' => $id]
             ],
-            'ConsistentRead' => false,
-            'ReturnConsumedCapacity' => false,
         ];
 
         $this->assertEquals($expected, $qb->build($query1)[1]);
@@ -378,8 +395,67 @@ class QueryBuilderTest extends TestCase
             'ExpressionAttributeValues' => [
                 ':dqp0' => ['S' => $id]
             ],
-            'ConsistentRead' => false,
-            'ReturnConsumedCapacity' => false,
+        ];
+
+        $this->assertEquals($expected, $qb->build($query1)[1]);
+    }
+
+    /**
+     * Test build Scan method with complicated condition
+     * @return void
+     */
+    public function testBuildScanWithComplicatedCondition()
+    {
+        $qb = $this->createQueryBuilder();
+        $faker = \Faker\Factory::create();
+        $name = $faker->firstNameFemale;
+        $id1 = $faker->firstNameFemale;
+        $id2 = $faker->firstNameFemale;
+        $query1 = $this->createQueryScan()->select(['id', 'name', 'contacts'])
+            ->where(['name' => $name])->andWhere(['id' => $id1]);
+        $query2 = $this->createQueryScan()->select(['id', 'name', 'contacts'])
+            ->where(['name' => $name])->andWhere(['id' => [$id1, $id2]]);
+        $query3 = $this->createQueryScan()->select(['id', 'name', 'contacts'])
+            ->where(['name' => $name])->andWhere(['attribute_exists', 'id']);
+        $query4 = $this->createQueryScan()->select(['id', 'name', 'contacts'])
+            ->where(['name' => $name])->andWhere(['begins_with', 'id', $id1]);
+
+        $expected = [
+            'TableName' => Customer::tableName(),
+            'FilterExpression' => '(name=:dqp0) AND (id=:dqp1)',
+            'ProjectionExpression' => 'id, name, contacts',
+            'ExpressionAttributeValues' => [
+                ':dqp0' => ['S' => $name],
+                ':dqp1' => ['S' => $id1]
+            ],
+        ];
+        $this->assertEquals($expected, $qb->build($query1)[1]);
+
+        $expected['FilterExpression'] = '(name=:dqp0) AND (id IN (:dqp1, :dqp2))';
+        $expected['ExpressionAttributeValues'][':dqp2'] = ['S' => $id2];
+        $this->assertEquals($expected, $qb->build($query2)[1]);
+
+        $expected['FilterExpression'] = '(name=:dqp0) AND (attribute_exists (:dqp1))';
+        $expected['ExpressionAttributeValues'][':dqp1'] = ['S' => 'id'];
+        unset($expected['ExpressionAttributeValues'][':dqp2']);
+        $this->assertEquals($expected, $qb->build($query3)[1]);
+
+        $expected['FilterExpression'] = '(name=:dqp0) AND (begins_with (:dqp1, :dqp2))';
+        $expected['ExpressionAttributeValues'][':dqp2'] = ['S' => $id1];
+        $this->assertEquals($expected, $qb->build($query4)[1]);
+    }
+
+    /**
+     * Test build Simple Scan method with no parameter
+     * @return void
+     */
+    public function testBuildSimpleQueryNoParameter()
+    {
+        $qb = $this->createQueryBuilder();
+        $query1 = $this->createQuery();
+
+        $expected = [
+            'TableName' => Customer::tableName(),
         ];
 
         $this->assertEquals($expected, $qb->build($query1)[1]);
@@ -395,6 +471,9 @@ class QueryBuilderTest extends TestCase
         $faker = \Faker\Factory::create();
         $id = $faker->firstNameFemale;
         $query1 = $this->createQuery()->where(['id' => $id]);
+        $query2 = $this->createQuery()->where(['id' => $id])->withConsistentRead();
+        $query3 = $this->createQuery()->where(['id' => $id])->withoutConsistentRead();
+        $query4 = $this->createQuery()->where(['id' => $id])->setConsumedCapacity('NONE');
 
         $expected = [
             'TableName' => Customer::tableName(),
@@ -402,11 +481,17 @@ class QueryBuilderTest extends TestCase
             'ExpressionAttributeValues' => [
                 ':dqp0' => ['S' => $id]
             ],
-            'ConsistentRead' => false,
-            'ReturnConsumedCapacity' => false,
         ];
 
         $this->assertEquals($expected, $qb->build($query1)[1]);
+
+        $expected['ConsistentRead'] = true;
+        $this->assertEquals($expected, $qb->build($query2)[1]);
+        $expected['ConsistentRead'] = false;
+        $this->assertEquals($expected, $qb->build($query3)[1]);
+        unset($expected['ConsistentRead']);
+        $expected['ReturnConsumedCapacity'] = 'NONE';
+        $this->assertEquals($expected, $qb->build($query4)[1]);
     }
 
     /**
@@ -428,8 +513,6 @@ class QueryBuilderTest extends TestCase
             'ExpressionAttributeValues' => [
                 ':dqp0' => ['S' => $id]
             ],
-            'ConsistentRead' => false,
-            'ReturnConsumedCapacity' => false,
         ];
 
         $this->assertEquals($expected, $qb->build($query1)[1]);
@@ -455,10 +538,53 @@ class QueryBuilderTest extends TestCase
             'ExpressionAttributeValues' => [
                 ':dqp0' => ['S' => $id]
             ],
-            'ConsistentRead' => false,
-            'ReturnConsumedCapacity' => false,
         ];
 
         $this->assertEquals($expected, $qb->build($query1)[1]);
+    }
+
+    /**
+     * Test build Query method with complicated condition
+     * @return void
+     */
+    public function testBuildQueryWithComplicatedCondition()
+    {
+        $qb = $this->createQueryBuilder();
+        $faker = \Faker\Factory::create();
+        $name = $faker->firstNameFemale;
+        $id1 = $faker->firstNameFemale;
+        $id2 = $faker->firstNameFemale;
+        $query1 = $this->createQuery()->select(['id', 'name', 'contacts'])
+            ->where(['name' => $name])->andWhere(['id' => $id1]);
+        $query2 = $this->createQuery()->select(['id', 'name', 'contacts'])
+            ->where(['name' => $name])->andWhere(['id' => [$id1, $id2]]);
+        $query3 = $this->createQuery()->select(['id', 'name', 'contacts'])
+            ->where(['name' => $name])->andWhere(['attribute_exists', 'id']);
+        $query4 = $this->createQuery()->select(['id', 'name', 'contacts'])
+            ->where(['name' => $name])->andWhere(['begins_with', 'id', $id1]);
+
+        $expected = [
+            'TableName' => Customer::tableName(),
+            'KeyConditionExpression' => '(name=:dqp0) AND (id=:dqp1)',
+            'ProjectionExpression' => 'id, name, contacts',
+            'ExpressionAttributeValues' => [
+                ':dqp0' => ['S' => $name],
+                ':dqp1' => ['S' => $id1]
+            ],
+        ];
+        $this->assertEquals($expected, $qb->build($query1)[1]);
+
+        $expected['KeyConditionExpression'] = '(name=:dqp0) AND (id IN (:dqp1, :dqp2))';
+        $expected['ExpressionAttributeValues'][':dqp2'] = ['S' => $id2];
+        $this->assertEquals($expected, $qb->build($query2)[1]);
+
+        $expected['KeyConditionExpression'] = '(name=:dqp0) AND (attribute_exists (:dqp1))';
+        $expected['ExpressionAttributeValues'][':dqp1'] = ['S' => 'id'];
+        unset($expected['ExpressionAttributeValues'][':dqp2']);
+        $this->assertEquals($expected, $qb->build($query3)[1]);
+
+        $expected['KeyConditionExpression'] = '(name=:dqp0) AND (begins_with (:dqp1, :dqp2))';
+        $expected['ExpressionAttributeValues'][':dqp2'] = ['S' => $id1];
+        $this->assertEquals($expected, $qb->build($query4)[1]);
     }
 }

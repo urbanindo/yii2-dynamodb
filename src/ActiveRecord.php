@@ -46,7 +46,7 @@ class ActiveRecord extends BaseActiveRecord
      * @var array
      */
     protected static $_primaryKeys = [];
-    
+
     /**
      * Stores the response metadata either from retrieval operation such as
      * <ul>
@@ -57,7 +57,7 @@ class ActiveRecord extends BaseActiveRecord
      * @var array
      */
     protected $_responseData = [];
-    
+
     /**
      * Stores the operation type that retrieves this model. Eligible values are.
      * <ul>
@@ -96,7 +96,7 @@ class ActiveRecord extends BaseActiveRecord
      * @param array $options Additional options for the query class.
      * @return ActiveQuery the newly created [[ActiveQuery]] instance.
      */
-    public static function find(array $options = [])
+    public static function find($options = [])
     {
         return Yii::createObject(ActiveQuery::className(), array_merge([
             get_called_class(),
@@ -193,7 +193,7 @@ class ActiveRecord extends BaseActiveRecord
      * @param array $values The values to be inserted.
      * @return mixed
      */
-    public static function batchInsert(array $values)
+    public static function batchInsert($values)
     {
         return self::getDb()->createCommand()->putItems(static::tableName(), $values);
     }
@@ -204,7 +204,7 @@ class ActiveRecord extends BaseActiveRecord
      * @param array $options   Additional attribute.
      * @return static
      */
-    public static function findOne($condition, array $options = [])
+    public static function findOne($condition, $options = null)
     {
         return self::find($options)->where($condition)->one();
     }
@@ -215,7 +215,7 @@ class ActiveRecord extends BaseActiveRecord
      * @param array $options   Additional attribute for the query class.
      * @return static[]
      */
-    public static function findAll($condition, array $options = [])
+    public static function findAll($condition, $options = null)
     {
         return self::find($options)->where($condition)->all();
     }
@@ -276,7 +276,7 @@ class ActiveRecord extends BaseActiveRecord
     {
         throw new \yii\base\NotSupportedException(__METHOD__ . ' is not supported.');
     }
-    
+
     /**
      * Populates an active record object using a row of data from the database/storage.
      *
@@ -297,12 +297,12 @@ class ActiveRecord extends BaseActiveRecord
         $responseData = ArrayHelper::getValue($row, Query::RESPONSE_KEY_PARAM);
         unset($row[Query::RESPONSE_KEY_PARAM]);
         parent::populateRecord($record, $row);
-        
+
         if (!empty($responseData)) {
             $record->_responseData = $responseData;
         }
     }
-    
+
     /**
      * Returns the response meta data from BatchGetItem, GetItem, Scan, or Query
      * operation. This can contains `ConsumedCapacity`, `UnprocessedKeys`, `Count`,
@@ -314,7 +314,7 @@ class ActiveRecord extends BaseActiveRecord
     {
         return $this->_responseData;
     }
-    
+
     /**
      * Sets the method how the active record was retrieved. Valid values are
      * <ul>
@@ -330,7 +330,7 @@ class ActiveRecord extends BaseActiveRecord
     {
         $this->_findType = $type;
     }
-    
+
     /**
      * Returns the method how the active record was retrieved. Valid values are
      * <ul>
