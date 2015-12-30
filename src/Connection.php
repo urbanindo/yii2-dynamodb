@@ -21,6 +21,7 @@ class Connection extends \yii\base\Component
     /**
      * The configuration for DynamoDB client.
      * @var array
+     * @see http://docs.aws.amazon.com/aws-sdk-php/v2/guide/service-dynamodb.html#factory-method
      */
     public $config;
 

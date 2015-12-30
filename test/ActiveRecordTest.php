@@ -4,30 +4,7 @@ class ActiveRecordTest extends TestCase {
     
     protected function setUp() {
         parent::setUp();
-        $command = $this->getConnection()->createCommand();
-        /* @var $command \UrbanIndo\Yii2\DynamoDb\Command */
-        $table = \test\data\Customer::tableName();
-        if ($command->tableExists($table)) {
-            $command->deleteTable($table)->execute();
-        }
-        $command->createTable($table, [
-            'AttributeDefinitions' => [
-                [
-                    'AttributeName' => 'id',
-                    'AttributeType' => 'N'
-                ]
-            ],
-            'KeySchema' => [
-                [
-                    'AttributeName' => 'id',
-                    'KeyType' => 'HASH',
-                ]
-            ],
-            'ProvisionedThroughput' => [
-                'ReadCapacityUnits' => 10,
-                'WriteCapacityUnits' => 10
-            ]
-        ])->execute();
+        $this->createCustomersTable();
     }
     
     public function testInsertAndFindOne() {

@@ -118,4 +118,32 @@ abstract class TestCase extends \PHPUnit_Framework_TestCase
         }
         return $vendor;
     }
+    
+    protected function createCustomersTable()
+    {
+        $command = $this->createCommand();
+        /* @var $command \UrbanIndo\Yii2\DynamoDb\Command */
+        $table = \test\data\Customer::tableName();
+        if ($command->tableExists($table)) {
+            $command->deleteTable($table)->execute();
+        }
+        $command->createTable($table, [
+            'AttributeDefinitions' => [
+                [
+                    'AttributeName' => 'id',
+                    'AttributeType' => 'N'
+                ]
+            ],
+            'KeySchema' => [
+                [
+                    'AttributeName' => 'id',
+                    'KeyType' => 'HASH',
+                ]
+            ],
+            'ProvisionedThroughput' => [
+                'ReadCapacityUnits' => 10,
+                'WriteCapacityUnits' => 10
+            ]
+        ])->execute();
+    }
 }

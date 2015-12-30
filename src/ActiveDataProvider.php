@@ -47,6 +47,20 @@ class ActiveDataProvider extends \yii\data\BaseDataProvider
     public $db = 'dynamodb';
     
     /**
+     * @var string|callable the column that is used as the key of the data models.
+     * This can be either a column name, or a callable that returns the key value of a given data model.
+     *
+     * If this is not set, the following rules will be used to determine the keys of the data models:
+     *
+     * - If [[query]] is an [[\yii\db\ActiveQuery]] instance,
+     *   the primary keys of [[\yii\db\ActiveQuery::modelClass]] will be used.
+     * - Otherwise, the keys of the [[models]] array will be used.
+     *
+     * @see getKeys()
+     */
+    public $key;
+    
+    /**
      * Initializes the DB connection component.
      * This method will initialize the [[db]] property to make sure it refers to a valid DB connection.
      * @return void
@@ -65,10 +79,44 @@ class ActiveDataProvider extends \yii\data\BaseDataProvider
      * @param array $models The available data models.
      * @return array the keys.
      */
-    protected function prepareKeys(array $models)
+    protected function prepareKeys($models)
     {
-        $models;
-        return [];
+        $keys = [];
+        if ($this->key !== null) {
+            foreach ($models as $model) {
+                if (is_string($this->key)) {
+                    $keys[] = $model[$this->key];
+                } else {
+                    $keys[] = call_user_func($this->key, $model);
+                }
+            }
+
+            return $keys;
+        } elseif ($this->query instanceof \yii\db\ActiveQueryInterface) {
+            /* @var $class ActiveRecord */
+            $query = $this->query;
+            /* @var $query ActiveQuery */
+            $class = $query->modelClass;
+            $pks = $class::primaryKey();
+            if (count($pks) === 1) {
+                $pk = $pks[0];
+                foreach ($models as $model) {
+                    $keys[] = $model[$pk];
+                }
+            } else {
+                foreach ($models as $model) {
+                    $kk = [];
+                    foreach ($pks as $pk) {
+                        $kk[$pk] = $model[$pk];
+                    }
+                    $keys[] = $kk;
+                }
+            }
+
+            return $keys;
+        } else {
+            return array_keys($models);
+        }
     }
 
     /**
@@ -82,9 +130,9 @@ class ActiveDataProvider extends \yii\data\BaseDataProvider
             throw new InvalidConfigException('The "query" property must be an instance of a class that '.
                                              'implements the UrbanIndo\Yii2\DynamoDb\Query or its subclasses.');
         }
+        
         $query = clone $this->query;
         if (($pagination = $this->getPagination()) !== false) {
-            $pagination->totalCount = $this->getTotalCount();
             $query->limit($pagination->getLimit());
             $query->offset($pagination->getOffset());
         }
@@ -100,18 +148,12 @@ class ActiveDataProvider extends \yii\data\BaseDataProvider
     }
 
     /**
-     * Returns a value indicating the total number of data models in this data provider.
-     * @return integer total number of data models in this data provider.
-     * @throws InvalidConfigException When the query is not istance of UrbanIndo\Yii2\DynamoDb\Query.
+     * This will always return 0.
+     * @return integer Value 0.
      */
     protected function prepareTotalCount()
     {
-        if (!$this->query instanceof Query) {
-            throw new InvalidConfigException('The "query" property must be an instance of a class'.
-                        ' that implements the UrbanIndo\Yii2\DynamoDb\Query or its subclasses.');
-        }
-        $query = clone $this->query;
-        return (int) $query->limit(-1)->orderBy([])->count('*', $this->db);
+        return 0;
     }
     
     /**
@@ -122,11 +164,7 @@ class ActiveDataProvider extends \yii\data\BaseDataProvider
      */
     public function getPagination()
     {
-        if ($this->_pagination === null) {
-            $this->setPagination([]);
-        }
-
-        return $this->_pagination;
+        return parent::getPagination();
     }
     
     /**
