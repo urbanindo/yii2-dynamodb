@@ -24,7 +24,6 @@ use yii\db\ActiveRelationTrait;
  *
  * - [[one()]]: returns a single record populated with the first row of data.
  * - [[all()]]: returns all records based on the query results.
- * - [[count()]]: returns the number of records.
  * - [[scalar()]]: returns the value of the first column in the first row of the query result.
  * - [[column()]]: returns the value of the first column in the query result.
  * - [[exists()]]: returns a value indicating whether the query result has data or not.
@@ -65,49 +64,56 @@ class ActiveQuery extends Query implements ActiveQueryInterface
         parent::init();
         $this->trigger(self::EVENT_INIT);
     }
-
+    
     /**
-     * @param Connection $db The DB connection used to create the DB command.
-     * @return ActiveRecord
+     * Converts the raw query results into the format as specified by this query.
+     * This method is internally used to convert the data fetched from database
+     * into the format as required by this query.
+     * @param array $rows The rows from response parsing.
+     * @return array the converted query result
      */
-    public function one(Connection $db = null)
+    public function populate($rows)
     {
-        /* @var $response \Guzzle\Service\Resource\Model */
-        $response = parent::one($db);
-        $value = $response->get('Item');
-        $marshaller = new \Aws\DynamoDb\Marshaler();
-        return $this->createModel($value, $marshaller);
-    }
-
-    /**
-     * @param Connection $db The DB connection used to create the DB command.
-     * @return ActiveRecord[]
-     */
-    public function all(Connection $db = null)
-    {
-        $responses = parent::all($db);
-        $modelClass = $this->modelClass;
-        $marshaller = new \Aws\DynamoDb\Marshaler();
-        return array_map(function ($value) use ($marshaller) {
-            return $this->createModel($value, $marshaller);
-        }, $responses[$modelClass::tableName()]);
-    }
-
-    /**
-     * Create model based on dynamodb return value.
-     * @param mixed                   $value      The return value from dynamodb.
-     * @param \Aws\DynamoDb\Marshaler $marshaller The marshaller.
-     * @return ActiveRecord
-     */
-    private function createModel(
-        $value,
-        \Aws\DynamoDb\Marshaler $marshaller = null
-    ) {
-        $model = new $this->modelClass;
-        if (!isset($marshaller)) {
-            $marshaller = new \Aws\DynamoDb\Marshaler();
+        if (empty($rows)) {
+            return [];
         }
-        $model->setAttributes($marshaller->unmarshalItem($value), false);
-        return $model;
+        
+        $models = $this->createModels($rows);
+        if (!$this->asArray) {
+            foreach ($models as $model) {
+                $model->afterFind();
+            }
+        }
+        return $models;
+    }
+
+    /**
+     * Executes query and returns a single row of result.
+     * @param Connection $db The DB connection used to create the DB command.
+     * If null, the DB connection returned by [[modelClass]] will be used.
+     * @return ActiveRecord|array|null a single row of query result. Depending on the setting of [[asArray]],
+     * the query result may be either an array or an ActiveRecord object. Null will be returned
+     * if the query results in nothing.
+     */
+    public function one($db = null)
+    {
+        $row = parent::one($db);
+        if ($row !== false) {
+            $models = $this->populate([$row]);
+            return reset($models) ?: null;
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * Executes query and returns all results as an array.
+     * @param Connection $db The DB connection used to create the DB command.
+     * If null, the DB connection returned by [[modelClass]] will be used.
+     * @return array|ActiveRecord[] the query results. If the query results in nothing, an empty array will be returned.
+     */
+    public function all($db = null)
+    {
+        return parent::all($db);
     }
 }

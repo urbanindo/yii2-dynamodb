@@ -99,10 +99,10 @@ class Query extends Component implements QueryInterface
     public $responseDataKeyParam = '_response';
 
     /**
-     * Executes the query and returns all results as an array.
-     * @param Connection $db The database connection used to execute the query.
-     * If this parameter is not given, the `dynamodb` application component will be used.
-     * @return Command
+     * Creates a DB command that can be used to execute this query.
+     * @param Connection $db The database connection used to generate the SQL statement.
+     * If this parameter is not given, the `db` application component will be used.
+     * @return Command the created DB command instance.
      */
     public function createCommand(Connection $db = null)
     {
@@ -112,6 +112,18 @@ class Query extends Component implements QueryInterface
         $config = $db->getQueryBuilder()->build($this);
 
         return $db->createCommand($config);
+    }
+    
+    
+    /**
+     * Creates command and execute the query.
+     * @param Connection $db The database connection used.
+     * @return array The raw response.
+     */
+    public function execute(Connection $db = null)
+    {
+        $command = $this->createCommand($db);
+        return $command->execute();
     }
 
     /**
@@ -256,12 +268,11 @@ class Query extends Component implements QueryInterface
      * Converts the raw query results into the format as specified by this query.
      * This method is internally used to convert the data fetched from database
      * into the format as required by this query.
-     * @param array $response The raw response result from operation.
+     * @param array $rows The rows resulted from response parsing.
      * @return array the converted query result
      */
-    public function populate($response)
+    public function populate($rows)
     {
-        $rows = $this->getItemsFromResponse($response);
         if ($this->indexBy === null) {
             return $rows;
         }
@@ -282,37 +293,27 @@ class Query extends Component implements QueryInterface
     /**
      * Returns all object that matches the query.
      * @param Connection $db The dynamodb connection.
-     * @return array
+     * @return array The query results. If the query results in nothing, an empty array will be returned.
      */
     public function all($db = null)
     {
-        return $this->createCommand($db)->queryAll();
+        $response = $this->execute($db);
+        $rows = $this->getItemsFromResponse($response);
+        return $rows;
     }
 
     /**
-     * Returns one object that matches the query.
-     * @param Connection $db The dynamodb connection.
-     * @return array
+     * Executes the query and returns a single row of result.
+     * @param Connection $db The database connection used to generate the SQL statement.
+     * If this parameter is not given, the `db` application component will be used.
+     * @return array|boolean the first row (in terms of an array) of the query result. False is returned if the query
+     * results in nothing.
      */
     public function one($db = null)
     {
-        $this->using = self::USING_GET_ITEM;
-        return $this->createCommand($db)->queryOne();
-    }
-
-    /**
-     * Returns the number of records.
-     * @param string     $q  The COUNT expression. This parameter is ignored by this implementation.
-     * @param Connection $db The database connection used to execute the query.
-     * If this parameter is not given, the `elasticsearch` application component will be used.
-     * @return integer number of records
-     */
-    public function count($q = '*', $db = null)
-    {
-        //WIP
-        $q;
-        $db;
-        return $i;
+        $response = $this->execute($db);
+        $rows = $this->getItemsFromResponse($response);
+        return $rows;
     }
 
     /**
@@ -323,8 +324,21 @@ class Query extends Component implements QueryInterface
      */
     public function exists($db = null)
     {
-        //WIP
-        $db;
-        return false;
+        $response = $this->execute($db);
+        $rows = $this->getItemsFromResponse($response);
+        return !empty($rows);
+    }
+    
+    /**
+     * Returns the number of records.
+     * @param string     $q  The COUNT expression. This parameter is ignored by this implementation.
+     * @param Connection $db The database connection used to execute the query.
+     * If this parameter is not given, the `elasticsearch` application component will be used.
+     * @return void
+     * @throws NotSupportedException The count operation is not supported.
+     */
+    public function count($q = '*', $db = null)
+    {
+        throw new NotSupportedException('Count operation is not suppported.');
     }
 }
