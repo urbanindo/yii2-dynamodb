@@ -9,6 +9,7 @@ namespace UrbanIndo\Yii2\DynamoDb;
 
 use yii\base\Object;
 use yii\helpers\ArrayHelper;
+use yii\base\InvalidParamException;
 
 /**
  * QueryBuilder builds an elasticsearch query based on the specification given
@@ -19,9 +20,32 @@ use yii\helpers\ArrayHelper;
 class QueryBuilder extends Object
 {
     /**
+     * The prefix for automatically generated query binding parameters.
+     */
+    const PARAM_PREFIX = ':dqp';
+
+    /**
      * @var Connection the database connection.
      */
     public $db;
+
+    /**
+     * @var array map of query condition to builder methods.
+     * These methods are used by [[buildCondition]] to build SQL conditions from array syntax.
+     */
+    protected $conditionBuilders = [
+        'NOT' => 'buildNotCondition',
+        'AND' => 'buildAndOrCondition',
+        'OR' => 'buildAndOrCondition',
+        'BETWEEN' => 'buildBetweenCondition',
+        'IN' => 'buildInCondition',
+        'ATTRIBUTE_EXISTS' => 'buildFunctionCondition',
+        'ATTRIBUTE_NOT_EXISTS' => 'buildFunctionCondition',
+        'ATTRIBUTE_TYPE' => 'buildFunctionCondition2Param',
+        'BEGINS_WITH' => 'buildFunctionCondition2Param',
+        'CONTAINS' => 'buildFunctionCondition2Param',
+        'SIZE' => 'buildFunctionCondition',
+    ];
 
     /**
      * Constructor.
@@ -38,13 +62,584 @@ class QueryBuilder extends Object
      * Generates DynamoDB Query from a [[Query]] object.
      * @param Query $query Object from which the query will be generated.
      * @return array The generated DynamoDB command configuration.
+     * @throws InvalidArgumentException Table name should be exist.
      */
     public function build(Query $query)
     {
-        $query;
-        return [];
+        // Validate query
+        if (empty($query->from)) {
+            throw new InvalidArgumentException('Table name not set');
+        }
+
+        if ($query->using == Query::USING_AUTO) {
+            if (empty($query->where) || !empty($query->indexBy) || !empty($query->limit)
+                    || !empty($query->offset) || !empty($query->orderBy)) {
+                // TODO Choose appropiate method
+                if (empty($query->orderBy)) {
+                    $query->using = Query::USING_QUERY;
+                } else {
+                    $query->using = Query::USING_SCAN;
+                }
+            } else {
+                $query->using = Query::USING_BATCH_GET_ITEM;
+            }
+        }
+
+        $call = 'build' . $query->using;
+
+        // Call builder
+        return $this->{$call}($query);
     }
-    
+
+    /**
+     * Generates DynamoDB Query from a [[Query]] object use GetItem method
+     * @param Query $query Object from which the query will be generated.
+     * @return array The generated DynamoDB command configuration.
+     * @throws InvalidArgumentException Parameters should be comply with method.
+     */
+    public function buildGetItem(Query $query)
+    {
+        if (empty($query->where)) {
+            throw new InvalidArgumentException('WHERE clause must not be empty.');
+        }
+        if (!empty($query->indexBy) || !empty($query->limit) || !empty($query->offset) || !empty($query->orderBy)) {
+            throw new InvalidArgumentException($query->using .
+                ' is not support parameter beside where and select clause.');
+        }
+
+        return $this->getItem(
+            $query->from,
+            $this->buildWhereGetItem($query),
+            $this->buildOptions($query)
+        );
+    }
+
+    /**
+     * Generates DynamoDB Query from a [[Query]] object use BatchGetItem method
+     * @param Query $query Object from which the query will be generated.
+     * @return array The generated DynamoDB command configuration.
+     * @throws InvalidArgumentException Should comply with BatchGetItem condition.
+     */
+    public function buildBatchGetItem(Query $query)
+    {
+        if (empty($query->where)) {
+            throw new InvalidArgumentException('WHERE clause must not be empty.');
+        }
+        if (!empty($query->indexBy) || !empty($query->limit) || !empty($query->offset) || !empty($query->orderBy)) {
+            throw new InvalidArgumentException($query->using .
+                ' is not support parameter beside where and select clause.');
+        }
+
+        return $this->batchGetItem(
+            $query->from,
+            $this->buildWhereGetItem($query),
+            [],
+            $this->buildOptions($query)
+        );
+    }
+
+    /**
+     * Generates DynamoDB Query from a [[Query]] object use Scan method.
+     * @param Query $query Object from which the query will be generated.
+     * @return array The generated DynamoDB command configuration.
+     * @throws Exception Scan method do not support sorting.
+     */
+    public function buildScan(Query $query)
+    {
+        if (!empty($query->orderBy)) {
+            throw new Exception($query->using . ' method cannot set in order.');
+        }
+
+        $options = $this->buildOptions($query);
+        if (!empty($query->where)) {
+            $options = array_merge(
+                $options,
+                $this->buildWhereQueryScan($query->where)
+            );
+        }
+        return $this->scan($query->from, $options);
+    }
+
+    /**
+     * Generates DynamoDB Query from a [[Query]] object use Query method
+     * @param Query $query Object from which the query will be generated.
+     * @return array The generated DynamoDB command configuration.
+     */
+    public function buildQuery(Query $query)
+    {
+        $options = $this->buildOptions($query);
+        if (!empty($query->where)) {
+            $options = array_merge(
+                $options,
+                $this->buildWhereQueryScan($query->where)
+            );
+            // TODO Seperate FilterExpression and KeyConditionExpression
+            // For now, change all condition to KeyConditionExpression (assumed
+            // all where condition use key attributes)
+            $options['KeyConditionExpression'] = $options['FilterExpression'];
+            unset($options['FilterExpression']);
+        }
+        return $this->query($query->from, $options);
+    }
+
+    /**
+     * Generate projection or selection of attribute for DynamoDB query.
+     * @param Query $query Object from which the query will be generated.
+     * @return array Array of projection options.
+     */
+    public function buildProjection(Query $query)
+    {
+        if (!empty($query->select)) {
+            return is_array($query->select) ? [
+                    'ProjectionExpression' => implode(', ', $query->select)
+                ] : [
+                    'ProjectionExpression' => $query->select
+                ];
+        } else {
+            return [];
+        }
+    }
+
+    /**
+     * Generate $key parameter associate with query method.
+     * @param Query $query Object from which the parameter will be generated.
+     * @return array Array of parameter
+     * @throws InvalidParamException Param query has to comply.
+     */
+    public function buildWhereGetItem(Query $query)
+    {
+        if (!in_array($query->using, [Query::USING_BATCH_GET_ITEM])) {
+            return $query->where;
+        }
+        if (is_string($query->where) || is_numeric($query->where)) {
+            return [$query->where];
+        }
+        // remain array type
+        // supported example: ['a' => 'b'], ['IN', 'a', 'b'], [['IN', 'a', 'b']]
+        // and combination of it like [['IN', 'a', 'b'], 'c' => 'd']
+
+        $new_where = [];
+        foreach ($query->where as $key => $value) {
+            if (is_string($value) || is_numeric($value)) {
+                if (ArrayHelper::isIndexed($query->where)) {
+                    if ($query->where[0] != '=' && $query->where[0] != 'IN') {
+                        throw new InvalidParamException($query->using .
+                            " not support operator '" . $query->where[0] . "'.");
+                    }
+                    if (sizeof($query->where) != 3) {
+                        throw new InvalidParamException('The WHERE element require 3 elements.');
+                    }
+
+                    if (is_array($query->where[2])) {
+                        $new_where[$query->where[1]] = $query->where[2];
+                    } else {
+                        $new_where[$query->where[1]] = [$query->where[2]];
+                    }
+                    break;
+                } else {
+                    if (isset($new_where[$key])) {
+                        $new_where[$key] = array_merge($new_where[$key], [$value]);
+                    } else {
+                        $new_where[$key] = [$value];
+                    }
+                }
+            } else { // else just array type, perhaps
+                if (ArrayHelper::isIndexed($value)) {
+                    if (isset($new_where[$key])) {
+                        $new_where[$key] = array_merge($new_where[$key], $value);
+                    } else {
+                        $new_where[$key] = $value;
+                    }
+                }
+            }
+        }
+
+        return $new_where;
+    }
+
+    /**
+     * Build where condition comply with DynamoDB method Query and Scan.
+     * @param string|array $condition Condition or where value.
+     * @return array The WHERE clause built from [[Query::$where]].
+     * @throws Exception Throw when $condition is non array type.
+     */
+    public function buildWhereQueryScan($condition)
+    {
+        if (is_string($condition) || is_numeric($condition)) {
+            throw new Exception('Condition just accept array type.');
+        }
+        $params = [];
+        $where = $this->buildCondition($condition, $params);
+
+        return $where === '' ? [] : [
+                'FilterExpression' => $where,
+                'ExpressionAttributeValues' => $this->paramToExpressionAttributeValues($params),
+            ];
+    }
+
+    /**
+     * Parses the condition specification and generates the corresponding filter expression.
+     * @param array $params The binding parameters to be populated.
+     * @return string The generated array for expression attribute values.
+     * @throws Exception Value type just support basic value, temporary.
+     */
+    public function paramToExpressionAttributeValues($params)
+    {
+        foreach ($params as $i => $value) {
+            if (is_int($value)) {
+                $params[$i] = ['N' => $value];
+            } elseif (is_string($value)) {
+                $params[$i] = ['S' => $value];
+            } else {
+                throw new Exception('Unsupported value type.');
+            }
+        }
+        return $params;
+    }
+
+    /**
+     * Parses the condition specification and generates the corresponding filter expression.
+     * @param string|array $condition The condition specification. Please refer
+     * to [[Query::where()]] on how to specify a condition.
+     * @param array        $params    The binding parameters to be populated.
+     * @return string the generated filter expression
+     */
+    public function buildCondition($condition, &$params)
+    {
+        if (!is_array($condition)) {
+            return (string) $condition;
+        } elseif (empty($condition)) {
+            return '';
+        }
+        if (isset($condition[0])) { // operator format: operator, operand 1, operand 2, ...
+            $operator = strtoupper($condition[0]);
+            if (isset($this->conditionBuilders[$operator])) {
+                $method = $this->conditionBuilders[$operator];
+            } else {
+                $method = 'buildSimpleCondition';
+            }
+            array_shift($condition);
+            return $this->{$method}($operator, $condition, $params);
+        } else { // hash format: 'column1' => 'value1', 'column2' => 'value2', ...
+            return $this->buildHashCondition($condition, $params);
+        }
+    }
+
+    /**
+     * Creates a condition based on column-value pairs.
+     * @param array $condition The condition specification.
+     * @param array $params    The binding parameters to be populated.
+     * @return string The generated SQL expression
+     * @throws Exception No NULL value in DynamoDB.
+     */
+    public function buildHashCondition($condition, &$params)
+    {
+        $parts = [];
+        foreach ($condition as $attribute => $value) {
+            if (is_array($value)) {
+                // IN condition
+                $parts[] = $this->buildInCondition('IN', [$attribute, $value], $params);
+            } else {
+                if ($value === null) {
+                    throw new Exception(__METHOD__ . ' cannot include NULL value.');
+                } else {
+                    $phName = self::PARAM_PREFIX . count($params);
+                    $parts[] = "$attribute=$phName";
+                    $params[$phName] = $value;
+                }
+            }
+        }
+        return count($parts) === 1 ? $parts[0] : '(' . implode(') AND (', $parts) . ')';
+    }
+
+    /**
+     * Connects two or more filter expressions with the `AND` or `OR` operator.
+     * @param string $operator The operator to use for connecting the given operands.
+     * @param array  $operands The SQL expressions to connect.
+     * @param array  $params   The binding parameters to be populated.
+     * @return string The generated filter expression.
+     */
+    public function buildAndOrCondition($operator, $operands, &$params)
+    {
+        $parts = [];
+        foreach ($operands as $operand) {
+            if (is_array($operand)) {
+                $operand = $this->buildCondition($operand, $params);
+            }
+            if ($operand !== '') {
+                $parts[] = $operand;
+            }
+        }
+        if (!empty($parts)) {
+            return '(' . implode(") $operator (", $parts) . ')';
+        } else {
+            return '';
+        }
+    }
+
+    /**
+     * Inverts an SQL expressions with `NOT` operator.
+     * @param string $operator The operator to use for connecting the given operands.
+     * @param array  $operands The SQL expressions to connect.
+     * @param array  $params   The binding parameters to be populated.
+     * @return string The generated SQL expression
+     * @throws InvalidParamException If wrong number of operands have been given.
+     */
+    public function buildNotCondition($operator, $operands, &$params)
+    {
+        if (count($operands) !== 1) {
+            throw new InvalidParamException("Operator '$operator' requires exactly one operand.");
+        }
+        $operand = reset($operands);
+        if (is_array($operand)) {
+            $operand = $this->buildCondition($operand, $params);
+        }
+        if ($operand === '') {
+            return '';
+        }
+        return "$operator ($operand)";
+    }
+
+    /**
+     * Creates an SQL expressions with the `BETWEEN` operator.
+     * @param string $operator The operator to use (e.g. `BETWEEN` or `NOT BETWEEN`).
+     * @param array  $operands The first operand is the column name. The second and
+     * third operands describe the interval that column value should be in.
+     * @param array  $params   The binding parameters to be populated.
+     * @return string The generated SQL expression.
+     * @throws InvalidParamException If wrong number of operands have been given.
+     */
+    public function buildBetweenCondition($operator, $operands, &$params)
+    {
+        if (!isset($operands[0], $operands[1], $operands[2])) {
+            throw new InvalidParamException("Operator '$operator' requires three operands.");
+        }
+        list($column, $value1, $value2) = $operands;
+        $phName1 = self::PARAM_PREFIX . count($params);
+        $params[$phName1] = $value1;
+        $phName2 = self::PARAM_PREFIX . count($params);
+        $params[$phName2] = $value2;
+        return "$column $operator $phName1 AND $phName2";
+    }
+
+    /**
+     * Creates an filter expressions with the `IN` operator.
+     * @param string $operator The operator to use (e.g. `IN` or `NOT IN`).
+     * @param array  $operands The first operand is the column name. If it is an array
+     * a composite IN condition will be generated.
+     * The second operand is an array of values that column value should be among.
+     * If it is an empty array the generated expression will be a `false` value if
+     * operator is `IN` and empty if operator is `NOT IN`.
+     * @param array  $params   The binding parameters to be populated.
+     * @return string The generated filter expression.
+     * @throws Exception If wrong number of operands have been given or no NULL
+     * value in DynamoDB.
+     */
+    public function buildInCondition($operator, $operands, &$params)
+    {
+        if (!isset($operands[0], $operands[1])) {
+            throw new Exception("Operator '$operator' requires two operands.");
+        }
+        list($column, $values) = $operands;
+        if ($values === [] || $column === []) {
+            return $operator === 'IN' ? '0=1' : '';
+        }
+        $values = (array) $values;
+        if (count($column) > 1) {
+            return $this->buildCompositeInCondition($operator, $column, $values, $params);
+        }
+        if (is_array($column)) {
+            $column = reset($column);
+        }
+        foreach ($values as $i => $value) {
+            if (is_array($value)) {
+                $value = isset($value[$column]) ? $value[$column] : null;
+            }
+            if ($value === null) {
+                throw new Exception(__METHOD__ . ' cannot include NULL value.');
+            } else {
+                $phName = self::PARAM_PREFIX . count($params);
+                $params[$phName] = $value;
+                $values[$i] = $phName;
+            }
+        }
+        if (count($values) > 1) {
+            return "$column $operator (" . implode(', ', $values) . ')';
+        } else {
+            $operator = $operator === 'IN' ? '=' : '<>';
+            return $column . $operator . reset($values);
+        }
+    }
+
+    /**
+     * Builds filter expression for IN condition
+     *
+     * @param string $operator The operator to use. Anything could be used e.g. '`IN`'.
+     * @param array  $columns  The columns of composite IN condition.
+     * @param array  $values   The values of composite IN condition.
+     * @param array  $params   The binding parameters to be populated.
+     * @return string Filter expression.
+     * @throws Exception No NULL value in DynamoDB.
+     */
+    protected function buildCompositeInCondition($operator, $columns, $values, &$params)
+    {
+        $vss = [];
+        foreach ($values as $value) {
+            $vs = [];
+            foreach ($columns as $column) {
+                if (isset($value[$column])) {
+                    $phName = self::PARAM_PREFIX . count($params);
+                    $params[$phName] = $value[$column];
+                    $vs[] = $phName;
+                } else {
+                    throw new Exception(__METHOD__ . ' cannot include NULL value.');
+                }
+            }
+            $vss[] = '(' . implode(', ', $vs) . ')';
+        }
+        foreach ($columns as $i => $column) {
+            if (strpos($column, '(') === false) {
+                $columns[$i] = $this->db->quoteColumnName($column);
+            }
+        }
+        return '(' . implode(', ', $columns) . ") $operator (" . implode(', ', $vss) . ')';
+    }
+
+    /**
+     * Creates an filter expressions for function.
+     * @param string $func     The operator to use. Anything could be used e.g. `>`, `<=`, etc.
+     * @param array  $operands Contains two column names.
+     * @param array  $params   The binding parameters to be populated.
+     * @return string The generated filter expression.
+     * @throws InvalidParamException If wrong number of operands have been given.
+     */
+    public function buildFunctionCondition($func, $operands, &$params)
+    {
+        if (count($operands) !== 1) {
+            throw new InvalidParamException("Function '$func' requires exactly one operand.");
+        }
+        $operand = reset($operands);
+        if (is_array($operand)) {
+            $operand = $this->buildCondition($operand, $params);
+        } else {
+            $phName1 = self::PARAM_PREFIX . count($params);
+            $params[$phName1] = $operand;
+            $operand = $phName1;
+        }
+        if ($operand === '') {
+            return '';
+        }
+        $func = strtolower($func);
+        return "$func ($operand)";
+    }
+
+    /**
+     * Creates an filter expressions like `"column" operator value`.
+     * @param string $func     The operator to use. Anything could be used e.g. `>`, `<=`, etc.
+     * @param array  $operands Contains two column names.
+     * @param array  $params   The binding parameters to be populated.
+     * @return string The generated SQL expression.
+     * @throws InvalidParamException If wrong number of operands have been given.
+     */
+    public function buildFunctionCondition2Param($func, $operands, &$params)
+    {
+        if (count($operands) !== 2) {
+            throw new InvalidParamException("Function '$func' requires exactly two operands.");
+        }
+        $phName1 = self::PARAM_PREFIX . count($params);
+        $params[$phName1] = $operands[0];
+        $phName2 = self::PARAM_PREFIX . count($params);
+        $params[$phName2] = $operands[1];
+        $func = strtolower($func);
+        return "$func ($phName1, $phName2)";
+    }
+
+    /**
+     * Creates an filter expressions like `"column" operator value`.
+     * @param string $operator The operator to use. Anything could be used e.g. `>`, `<=`, etc.
+     * @param array  $operands Contains two column names.
+     * @param array  $params   The binding parameters to be populated.
+     * @return string the generated filter expression.
+     * @throws InvalidParamException If wrong number of operands have been given.
+     * @throws Exception No NULL value in DynamoDB.
+     */
+    public function buildSimpleCondition($operator, $operands, &$params)
+    {
+        if (count($operands) !== 2) {
+            throw new InvalidParamException("Operator '$operator' requires two operands.");
+        }
+        list($column, $value) = $operands;
+        if ($value === null) {
+            throw new Exception(__METHOD__ . ' cannot include NULL value.');
+        } else {
+            $phName = self::PARAM_PREFIX . count($params);
+            $params[$phName] = $value;
+            return "$column $operator $phName";
+        }
+    }
+
+    /**
+     * Generate options or addition information for DynamoDB query
+     * @param Query $query Object from which the query will be generated.
+     * @return array Another options which used in the query
+     * @throws InvalidArgumentException Table name should be exist and IndexName
+     * is string type, can not callable.
+     */
+    public function buildOptions(Query $query)
+    {
+        $options = [];
+
+        if (!empty($query->orderBy)) {
+            $sort = '';
+            if (is_array($query->orderBy)) {
+                if (ArrayHelper::isIndexed($query->orderBy)) {
+                    $query->indexBy = $query->orderBy[0];
+                    $sort = $query->orderBy[1];
+                } else {
+                    $query->indexBy = key($query->orderBy);
+                    $sort = current($query->orderBy);
+                }
+            } else {
+                list($index, $sort) = explode(' ', $query->orderBy, 2);
+                $query->indexBy = $index;
+            }
+            $sort = strtoupper($sort);
+            if (!in_array($sort, ['ASC', 'DESC'])) {
+                throw new InvalidArgumentException('Sort key unknown: ' . reset($query->orderBy));
+            }
+            $options['ScanIndexForward'] = ($sort == 'ASC');
+        }
+        if (!empty($query->indexBy)) {
+            if (is_callable($query->indexBy)) {
+                throw new InvalidArgumentException('Cannot combine callable parameter.');
+            }
+            $options = array_merge($options, ['IndexName' => $query->indexBy]);
+        }
+        if (!empty($query->limit)) {
+            $options = array_merge($options, ['Limit' => (int) $query->limit]);
+        }
+        if (!is_null($query->consistentRead)) {
+            if (!is_bool($query->consistentRead)) {
+                throw new InvalidArgumentException(
+                    'Unsupported consistent read value. Accept boolean type.'
+                );
+            }
+            $options['ConsistentRead'] = $query->consistentRead;
+        }
+        if (!empty($query->returnConsumedCapacity)) {
+            $query->returnConsumedCapacity = strtoupper($query->returnConsumedCapacity);
+            if (!in_array($query->returnConsumedCapacity, ['INDEXES', 'TOTAL', 'NONE'])) {
+                throw new InvalidArgumentException(
+                    'Unsupported return consumed capacity value:' .
+                    $query->returnConsumedCapacity
+                );
+            }
+            $options['ReturnConsumedCapacity'] = $query->returnConsumedCapacity;
+        }
+
+        return array_merge($options, $this->buildProjection($query));
+    }
+
     /**
      * Builds a DynamoDB command to create table.
      *
@@ -59,7 +654,7 @@ class QueryBuilder extends Object
         $argument = array_merge(['TableName' => $table], $options);
         return [$name, $argument];
     }
-    
+
     /**
      * Builds a DynamoDB command to describe table.
      *
@@ -73,7 +668,7 @@ class QueryBuilder extends Object
         $argument = ['TableName' => $table];
         return [$name, $argument];
     }
-    
+
     /**
      * Builds a DynamoDB command to delete table.
      *
@@ -106,7 +701,7 @@ class QueryBuilder extends Object
         ], $options);
         return [$name, $argument];
     }
-    
+
     /**
      * Builds a DynamoDB command to get item.
      *
@@ -122,10 +717,10 @@ class QueryBuilder extends Object
     public function getItem($table, $key, array $options = [])
     {
         $name = 'GetItem';
-        
+
         $tableDescription = $this->db->createCommand()->describeTable($table)->execute();
         $keySchema = $tableDescription['Table']['KeySchema'];
-        
+
         if (is_string($key) || is_numeric($key)) {
             $keyArgument = $this->buildGetItemScalarKey($keySchema, $key);
         } else {
@@ -139,7 +734,7 @@ class QueryBuilder extends Object
         );
         return [$name, $argument];
     }
-    
+
     /**
      * @param array $keySchema The schema of the key in the table.
      * @param mixed $key       The key either string or integer.
@@ -157,7 +752,7 @@ class QueryBuilder extends Object
             $keyName => Marshaler::marshalValue($key),
         ];
     }
-    
+
     /**
      * @param array $keySchema The schema of the key in the table.
      * @param array $keys      The key as indexed key or associative key.
@@ -177,7 +772,7 @@ class QueryBuilder extends Object
         }
         return $keyArgument;
     }
-    
+
     /**
      * Builds a DynamoDB command for batch get item.
      *
@@ -224,17 +819,17 @@ class QueryBuilder extends Object
     public function batchGetItem($table, array $keys, array $options = [], array $requestItemOptions = [])
     {
         $name = 'BatchGetItem';
-        
-        $tableArgument = array_merge([
-            $table => [
-                    'Keys' => $this->buildBatchKeyArgument($table, $keys),
-            ]
-        ], $requestItemOptions);
-        
+
+        $tableArgument = [
+            $table => array_merge([
+                'Keys' => $this->buildBatchKeyArgument($table, $keys),
+            ], $requestItemOptions)
+        ];
+
         $argument = array_merge(['RequestItems' => $tableArgument], $options);
         return [$name, $argument];
     }
-    
+
     /**
      * Resolve the keys into `BatchGetItem` eligible argument.
      * @param string $table The name of the table.
@@ -245,7 +840,7 @@ class QueryBuilder extends Object
     {
         $tableDescription = $this->db->createCommand()->describeTable($table)->execute();
         $keySchema = $tableDescription['Table']['KeySchema'];
-        
+
         if (ArrayHelper::isIndexed($keys)) {
             $isScalar = is_string($keys[0]) || is_numeric($keys[0]);
             if ($isScalar) {
@@ -259,7 +854,7 @@ class QueryBuilder extends Object
             return $this->buildBatchGetItemFromAssociativeArray($keySchema, $keys);
         }
     }
-    
+
     /**
      * @param array $keySchema The KeySchema of the table.
      * @param array $keys      Indexed array of scalar element.
@@ -278,7 +873,7 @@ class QueryBuilder extends Object
             ];
         }, $keys);
     }
-    
+
     /**
      * @param array $keySchema The KeySchema of the table.
      * @param array $keys      Indexed array of indexed array.
@@ -295,7 +890,7 @@ class QueryBuilder extends Object
             return $return;
         }, $keys);
     }
-    
+
     /**
      * @param array $keySchema The KeySchema of the table.
      * @param array $keys      Indexed array of associative array.
@@ -313,7 +908,7 @@ class QueryBuilder extends Object
             return $return;
         }, $keys);
     }
-    
+
     /**
      * @param array $keySchema The KeySchema of the table.
      * @param array $keys      Associative array of indexed scalar.
@@ -339,7 +934,7 @@ class QueryBuilder extends Object
         }
         return $this->buildBatchKeyArgumentFromIndexedArrayOfAssociativeArray($keySchema, $indexedKey);
     }
-    
+
     /**
      * Builds a DynamoDB command to scan table.
      *
@@ -356,7 +951,7 @@ class QueryBuilder extends Object
         ], $options);
         return [$name, $argument];
     }
-    
+
     /**
      * Builds a DynamoDB command to query table.
      *
@@ -373,7 +968,7 @@ class QueryBuilder extends Object
         ], $options);
         return [$name, $argument];
     }
-    
+
     /**
      * Builds a DynamoDB command to put multiple items.
      *
@@ -400,7 +995,7 @@ class QueryBuilder extends Object
         ], $options);
         return [$name, $argument];
     }
-    
+
     /**
      * Builds a DynamoDB command for batch delete item.
      *
@@ -454,13 +1049,13 @@ class QueryBuilder extends Object
                 ]
             ];
         }, $keyArgument);
-        
+
         $argument = array_merge([
             'RequestItems' => [
                 $table => $deleteRequests,
             ]
         ], $options);
-        
+
         return [$name, $argument];
     }
 }

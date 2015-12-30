@@ -28,30 +28,30 @@ class Query extends Component implements QueryInterface
      * @link http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchGetItem.html
      */
     const USING_BATCH_GET_ITEM = 'BatchGetItem';
-    
+
     /**
      * If the query is GetItem operation, meaning the query is for a single item using the key.
      * @link http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_GetItem.html
      */
     const USING_GET_ITEM = 'GetItem';
-    
+
     /**
      * If the query is Query operation, meaning it uses primary key or secondary key from the table.
      * @link http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Query.html
      */
     const USING_QUERY = 'Query';
-    
+
     /**
      * If the query is Scan operation, meaning it will access every item in the table.
      * @link http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Query.html
      */
     const USING_SCAN = 'Scan';
-    
+
     /**
      * This will try to detect the auto.
      */
     const USING_AUTO = 'Auto';
-    
+
     /**
      * The name of the key of the row to store the response data.
      */
@@ -69,7 +69,7 @@ class Query extends Component implements QueryInterface
      * @see from()
      */
     public $using = self::USING_AUTO;
-    
+
     /**
      * Whether to use consistent read or not.
      * @var boolean
@@ -87,7 +87,7 @@ class Query extends Component implements QueryInterface
      * @var string
      */
     public $from;
-    
+
     /**
      * Whether to store response data in the data returned. This can be either boolean
      * false if not to store response data or the key of the response to store.
@@ -110,8 +110,8 @@ class Query extends Component implements QueryInterface
 
         return $db->createCommand($config);
     }
-    
-    
+
+
     /**
      * Creates command and execute the query.
      * @param Connection $db The database connection used.
@@ -192,25 +192,16 @@ class Query extends Component implements QueryInterface
     }
 
     /**
-     * Whether to return the consumed capacity.
+     * Whether to use the consumed capacity.
+     * @param string $setConsumedCapacity String about consumed capacity.
      * @return static
      */
-    public function withConsumedCapacity()
+    public function setConsumedCapacity($setConsumedCapacity)
     {
-        $this->returnConsumedCapacity = true;
+        $this->returnConsumedCapacity = $setConsumedCapacity;
         return $this;
     }
 
-    /**
-     * Whether not to return the consumed capacity.
-     * @return static
-     */
-    public function withoutConsumedCapacity()
-    {
-        $this->returnConsumedCapacity = false;
-        return $this;
-    }
-    
     /**
      * @param array $response The raw response result from operation.
      * @return array array of values.
@@ -229,7 +220,7 @@ class Query extends Component implements QueryInterface
             $row = Marshaler::unmarshalItem($response['Item']);
             $rows = [$row];
         }
-        
+
         $storedResponse = self::extractStoredResponseData($this->storeResponseData, $response);
         if (!empty($storedResponse)) {
             $rows = array_map(function ($row) use ($storedResponse) {
@@ -237,10 +228,10 @@ class Query extends Component implements QueryInterface
                 return $row;
             }, $rows);
         }
-        
+
         return $rows;
     }
-    
+
     /**
      * @param mixed $responseKeys List of keys to store from operation response, false if don't want to store.
      * @param array $response     The raw response from operation.
@@ -260,7 +251,7 @@ class Query extends Component implements QueryInterface
         }
         return $return;
     }
-    
+
     /**
      * Converts the raw query results into the format as specified by this query.
      * This method is internally used to convert the data fetched from database
@@ -325,7 +316,7 @@ class Query extends Component implements QueryInterface
         $rows = $this->getItemsFromResponse($response);
         return !empty($rows);
     }
-    
+
     /**
      * Returns the number of records.
      * @param string     $q  The COUNT expression. This parameter is ignored by this implementation.
