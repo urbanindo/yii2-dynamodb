@@ -41,7 +41,7 @@ After the installation, sets the `dynamodb` component in the config.
 return [
     // ...
     'components' => [
-        //
+        // ...
         'dynamodb' => [
             'class' => 'UrbanIndo\Yii2\DynamoDb\Connection',
             'config' => [
@@ -58,3 +58,22 @@ return [
 ];
 ```
 
+## Limitation
+
+Because DynamoDB have different behavior with MySQL in general, there are several
+limitations or behavior change applied. There are several method to get data from
+DynamoDB: __GetItem__, __BatchGetItem__, __Scan__, and __Query__.
+
+1. We have tried to implement automatic method to acquire model from Query. You have
+to assign method explicitly when you want to force method in use.
+2. Not yet support attribute name aliasing (In MySQL known as field aliasing).
+3. When using __Query__ method, in where condition should using just key attributes.
+In next roll out will add filtering with non key attributes.
+4. To make pagination, we recommend using Query method when want to filter result.
+If you use filtering with non key attribute, it is possible result the model(s) less
+than desired limit value.
+5. `indexBy` and `orderBy` cannot use by attribute string value or callable parameter.
+This will use as string value and assign to `IndexName` parameter in DynamoDB. To
+use sorting, it will use __QUERY__ method and `orderBy` parameter should be either
+`['myIndex' => 'ASC']` or `['myIndex', 'ASC']`.
+6. Not support NULL type attribute.

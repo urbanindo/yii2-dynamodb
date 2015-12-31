@@ -202,7 +202,7 @@ class Query extends Component implements QueryInterface
      *  <li>INDEXES</li>
      *  <li>TOTAL</li>
      *  <li>NONE</li>
-     * </ul>
+     * </ul>.
      * @return static
      */
     public function setConsumedCapacity($setConsumedCapacity)
@@ -229,7 +229,7 @@ class Query extends Component implements QueryInterface
             $row = Marshaler::unmarshalItem($response['Item']);
             $rows = [$row];
         }
-        
+
         $storedResponse = self::extractStoredResponseData($this->storeResponseData, $response);
         if (!empty($storedResponse)) {
             $rows = array_map(function ($row) use ($storedResponse) {
@@ -260,7 +260,7 @@ class Query extends Component implements QueryInterface
         }
         return $return;
     }
-    
+
     /**
      * Prepares for building SQL.
      * This method is called by [[QueryBuilder]] when it starts to build SQL from a query object.

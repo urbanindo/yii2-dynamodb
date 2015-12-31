@@ -9,7 +9,7 @@ class ActiveDataProviderTest extends TestCase
         parent::setUp();
         $this->createCustomersTable();
     }
-    
+
     public function testWithoutPagination()
     {
         $faker = \Faker\Factory::create();
@@ -21,17 +21,17 @@ class ActiveDataProviderTest extends TestCase
             ]);
             $model->save(false);
         }
-        
+
         $dataProvider = new ActiveDataProvider([
             'query' => test\data\Customer::find()->where(['age' => 2]),
             'pagination' => false,
         ]);
-        
+
         $this->assertCount(5, $dataProvider->getModels());
-        
+
         $this->assertFalse($dataProvider->getPagination());
     }
-    
+
     public function testPagination()
     {
         $faker = \Faker\Factory::create();
@@ -43,19 +43,23 @@ class ActiveDataProviderTest extends TestCase
             ]);
             $model->save(false);
         }
-        
+
+        // Pagination using filter non key attribute would return less than
+        // desired limit.
         $dataProvider1 = new ActiveDataProvider([
-            'query' => test\data\Customer::find()->where(['>', 'age', 15]),
+            'query' => test\data\Customer::find(),
             'pagination' => [
                 'pageSize' => 5,
             ]
         ]);
-        
+
         $this->assertCount(5, $dataProvider1->getModels());
-        
+
         $pagination1 = $dataProvider1->getPagination();
         $this->assertNotNull($pagination1->getNextLastKey());
-        
+
+        // Pagination using filter non key attribute would return less than
+        // desired limit.
         $dataProvider2 = new ActiveDataProvider([
             'query' => test\data\Customer::find(),
             'pagination' => [
@@ -63,7 +67,7 @@ class ActiveDataProviderTest extends TestCase
                 'pageSize' => 5,
             ]
         ]);
-        
+
         $this->assertCount(5, $dataProvider2->getModels());
     }
 }

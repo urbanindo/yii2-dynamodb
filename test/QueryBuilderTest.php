@@ -440,8 +440,8 @@ class QueryBuilderTest extends TestCase
         unset($expected['ExpressionAttributeValues'][':dqp2']);
         $this->assertEquals($expected, $qb->build($query3)[1]);
 
-        $expected['FilterExpression'] = '(name=:dqp0) AND (begins_with (:dqp1, :dqp2))';
-        $expected['ExpressionAttributeValues'][':dqp2'] = ['S' => $id1];
+        $expected['FilterExpression'] = '(name=:dqp0) AND (begins_with (id, :dqp1))';
+        $expected['ExpressionAttributeValues'][':dqp1'] = ['S' => $id1];
         $this->assertEquals($expected, $qb->build($query4)[1]);
     }
 
@@ -583,8 +583,8 @@ class QueryBuilderTest extends TestCase
         unset($expected['ExpressionAttributeValues'][':dqp2']);
         $this->assertEquals($expected, $qb->build($query3)[1]);
 
-        $expected['KeyConditionExpression'] = '(name=:dqp0) AND (begins_with (:dqp1, :dqp2))';
-        $expected['ExpressionAttributeValues'][':dqp2'] = ['S' => $id1];
+        $expected['KeyConditionExpression'] = '(name=:dqp0) AND (begins_with (id, :dqp1))';
+        $expected['ExpressionAttributeValues'][':dqp1'] = ['S' => $id1];
         $this->assertEquals($expected, $qb->build($query4)[1]);
     }
 }
