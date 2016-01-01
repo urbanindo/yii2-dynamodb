@@ -123,13 +123,13 @@ class Pagination extends \yii\data\Pagination
     
     /**
      * Stores the current last key.
-     * @var string
+     * @var string|string[]
      */
     private $_lastKey;
     
     /**
      * Returns the last key evaluated in the DynamoDB.
-     * @return string
+     * @return string|string[]
      */
     public function getLastKey()
     {
@@ -141,7 +141,7 @@ class Pagination extends \yii\data\Pagination
     
     /**
      * Sets the current last key.
-     * @param string $value The last key that was evaluated by DynamoDB.
+     * @param string|string[] $value The last key that was evaluated by DynamoDB.
      * @return void
      */
     public function setLastKey($value)

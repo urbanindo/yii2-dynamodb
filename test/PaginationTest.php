@@ -39,13 +39,23 @@ class PaginationTest extends TestCase
                 5,
                 '/index.php?r=item%2Flist&last-key=2&per-page=5',
             ],
+            [
+                ['a', 'f'],
+                null,
+                '/index.php?r=item%2Flist&last-key%5B0%5D=a&last-key%5B1%5D=f',
+            ],
+            [
+                ['a', 'f'],
+                5,
+                '/index.php?r=item%2Flist&last-key%5B0%5D=a&last-key%5B1%5D=f&per-page=5',
+            ],
         ];
     }
     
     /**
      * @dataProvider dataProviderCreateUrl
      * 
-     * @param string $lastKey
+     * @param string|string[] $lastKey
      * @param integer $pageSize
      * @param string $expectedUrl
      */
@@ -90,16 +100,25 @@ class PaginationTest extends TestCase
                     'next' => '/index.php?r=item%2Flist&last-key=10&per-page=10',
                 ]
             ],
+            [
+                ['a', 'b'],
+                ['a', 'f'],
+                10,
+                [
+                    'self' => '/index.php?r=item%2Flist&last-key%5B0%5D=a&last-key%5B1%5D=b&per-page=10',
+                    'next' => '/index.php?r=item%2Flist&last-key%5B0%5D=a&last-key%5B1%5D=f&per-page=10',
+                ]
+            ]
         ];
     }
     
     /**
      * @dataProvider dataProviderGetLinks
      * 
-     * @param string  $currentLastKey The current last key.
-     * @param string  $nextLastKey    The next last key.
-     * @param integer $pageSize       The page size to show.
-     * @param array   $links          The links resulted
+     * @param string|string[] $currentLastKey The current last key.
+     * @param string|string[] $nextLastKey    The next last key.
+     * @param integer         $pageSize       The page size to show.
+     * @param array           $links          The links resulted
      */
     public function testGetLinks($currentLastKey, $nextLastKey, $pageSize, $links)
     {
