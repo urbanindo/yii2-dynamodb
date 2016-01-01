@@ -45,7 +45,7 @@ class QueryBuilder extends Object
         'ATTRIBUTE_TYPE' => 'buildFunctionCondition2Param',
         'BEGINS_WITH' => 'buildFunctionCondition2Param',
         'CONTAINS' => 'buildFunctionCondition2Param',
-        'SIZE' => 'buildFunctionCondition',
+        // 'SIZE' => 'buildFunctionCondition',
     ];
 
     /**
@@ -68,17 +68,20 @@ class QueryBuilder extends Object
     public function build(Query $query)
     {
         $query = $query->prepare($this);
-        
+
         // Validate query
         if (empty($query->from)) {
             throw new InvalidArgumentException('Table name not set');
         }
 
         if ($query->using == Query::USING_AUTO) {
+            $keyCondition = $this->isConditionMatchKeySchema($query);
+            $supportBatchGetItem = $this->isOperatorSupportBatchGetItem($query->where);
             if (empty($query->where) || !empty($query->indexBy) || !empty($query->limit)
-                    || !empty($query->offset) || !empty($query->orderBy)) {
-                // TODO Choose appropiate method
-                if (empty($query->orderBy)) {
+                    || !empty($query->offset) || !empty($query->orderBy)
+                    || $keyCondition != 1 || !$supportBatchGetItem) {
+                // TODO WARNING AWS SDK not support operator beside '=' for key
+                if (empty($query->orderBy) && ($keyCondition > 0) && $supportBatchGetItem) {
                     $query->using = Query::USING_QUERY;
                 } else {
                     $query->using = Query::USING_SCAN;
@@ -87,11 +90,151 @@ class QueryBuilder extends Object
                 $query->using = Query::USING_BATCH_GET_ITEM;
             }
         }
-        
+
         $call = 'build' . $query->using;
 
         // Call builder
         return $this->{$call}($query);
+    }
+
+    /**
+     * Find out where all operator condition is able to support BatchGetItem or not.
+     * @param array $where Where condition string.
+     * @return boolean True when operator support BatchGetItem.
+     */
+    public function isOperatorSupportBatchGetItem($where)
+    {
+        if (empty($where)) {
+            return false;
+        }
+        if (is_string($where) || is_numeric($where)) {
+            return true;
+        }
+        // Array type remaining
+        if (ArrayHelper::isIndexed($where)) {
+            foreach ($where as $whereIndexedElement) {
+                if (is_array($whereIndexedElement)) {
+                    if (!$this->isOperatorSupportBatchGetItem($whereIndexedElement)) {
+                        return false;
+                    }
+                } else {
+                    if (in_array($whereIndexedElement, ['IN', '='])) {
+                        return true;
+                    }
+                }
+            }
+        } else { // associative array remaining
+            foreach ($where as $key => $whereElement) {
+                if (is_array($whereElement)) {
+                    if (!$this->isOperatorSupportBatchGetItem($whereElement)) {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * To check conditoin which contain any key.
+     * @param Query $query Object from which the query will be generated.
+     * @return integer Return 0 if no match with key, 1 if match only key,
+     * 2 if contain both key and non key.
+     */
+    public function isConditionMatchKeySchema(Query $query)
+    {
+        if (is_array($query->where)) {
+            foreach ($this->getKeySchema($query) as $keySchemaElement) {
+                $keySchema[] = $keySchemaElement['AttributeName'];
+            }
+            $dummy = false;
+            if (!is_array(current($query->where))) {
+                return $this->searchAttrInArray([$query->where], $keySchema, $dummy);
+            } else {
+                return $this->searchAttrInArray($query->where, $keySchema, $dummy);
+            }
+        }
+
+        return 0;
+    }
+
+    /**
+     * Search keys in where schema compare within key schema.
+     * @param array   $where       Where schema.
+     * @param array   $keySchema   Key schema.
+     * @param boolean $hasFoundKey Has found key or did not.
+     * @return integer Return 0 if no match with key, 1 if match only key,
+     * 2 if contain both key and non key.
+     */
+    public function searchAttrInArray($where, $keySchema, &$hasFoundKey)
+    {
+        foreach ($where as $whereElement) {
+            if (ArrayHelper::isIndexed($whereElement)) {
+                if (sizeof($whereElement) < 2) {
+                    continue;
+                }
+                if (!in_array($whereElement[1], $keySchema)) {
+                    if ($hasFoundKey) {
+                        return 2;
+                    }
+                } else {
+                    $hasFoundKey = true;
+                }
+            } else {
+                foreach ($whereElement as $attr => $val) {
+                    if (is_array($val)) {
+                        $tmp = $this->searchAttrInArray($val, $keySchema, $hasFoundKey);
+                        if ($hasFoundKey) {
+                            return $tmp;
+                        }
+                    }
+                    if (!in_array($attr, $keySchema)) {
+                        if ($hasFoundKey) {
+                            return 2;
+                        }
+                    } else {
+                        $hasFoundKey = true;
+                    }
+                }
+            }
+        }
+
+        return $hasFoundKey ? 1 : 0;
+    }
+
+    /**
+     * Gather key schema
+     * @param Query $query Object from which the query will be generated.
+     * @return array Key schema
+     * @throws InvalidArgumentException IndexName not exist in table description.
+     */
+    public function getKeySchema(Query $query)
+    {
+        $tableDescription = $this->db->createCommand()->describeTable($query->from)->execute();
+        $options = $this->buildOptions($query);
+
+        if (isset($options['IndexName'])) {
+            if (isset($tableDescription['Table']['LocalSecondaryIndexes'])) {
+                foreach ($tableDescription['Table']['LocalSecondaryIndexes'] as $row) {
+                    if ($row['IndexName'] == $options['IndexName']) {
+                        return $row['KeySchema'];
+                    }
+                }
+            }
+            if (isset($tableDescription['Table']['GlobalSecondaryIndexes'])) {
+                foreach ($tableDescription['Table']['GlobalSecondaryIndexes'] as $row) {
+                    if ($row['IndexName'] == $options['IndexName']) {
+                        return $row['KeySchema'];
+                    }
+                }
+            }
+            // Throw because not found in both indexes
+            throw new InvalidArgumentException('Index is set but not found in table description.');
+        }
+
+        // Use global key schema instead
+        return $tableDescription['Table']['KeySchema'];
     }
 
     /**
@@ -132,7 +275,7 @@ class QueryBuilder extends Object
             throw new InvalidArgumentException($query->using .
                 ' is not support parameter beside where and select clause.');
         }
-        
+
         return $this->batchGetItem(
             $query->from,
             $this->buildWhereGetItem($query),
@@ -150,7 +293,7 @@ class QueryBuilder extends Object
     public function buildScan(Query $query)
     {
         if (!empty($query->orderBy)) {
-            throw new Exception($query->using . ' method cannot set in order.');
+            throw new Exception($query->using . ' method cannot use ORDER clause.');
         }
 
         $options = $this->buildOptions($query);
@@ -179,6 +322,7 @@ class QueryBuilder extends Object
             // TODO Seperate FilterExpression and KeyConditionExpression
             // For now, change all condition to KeyConditionExpression (assumed
             // all where condition use key attributes)
+
             $options['KeyConditionExpression'] = $options['FilterExpression'];
             unset($options['FilterExpression']);
         }
@@ -191,7 +335,7 @@ class QueryBuilder extends Object
      * @return array Array of projection options.
      */
     public function buildProjection(Query $query)
-    {   
+    {
         if (!empty($query->select)) {
             return is_array($query->select) ? [
                     'ProjectionExpression' => implode(', ', $query->select)
@@ -220,7 +364,7 @@ class QueryBuilder extends Object
         // remain array type
         // supported example: ['a' => 'b'], ['IN', 'a', 'b'], [['IN', 'a', 'b']]
         // and combination of it like [['IN', 'a', 'b'], 'c' => 'd']
-        
+
         $newWhere = [];
         foreach ($query->where as $key => $value) {
             if (is_string($value) || is_numeric($value)) {
@@ -229,8 +373,11 @@ class QueryBuilder extends Object
                         throw new InvalidParamException($query->using .
                             " not support operator '" . $query->where[0] . "'.");
                     }
-                    if (sizeof($query->where) != 3) {
-                        throw new InvalidParamException('The WHERE element require 3 elements.');
+                    if (sizeof($query->where) == 2) {
+                        $newWhere[$query->where[0]] = $query->where[1];
+                        break;
+                    } elseif (sizeof($query->where) != 3) {
+                        throw new InvalidParamException('The WHERE element require 2 or 3 elements.');
                     }
 
                     if (is_array($query->where[2])) {
@@ -256,7 +403,7 @@ class QueryBuilder extends Object
                 }
             }
         }
-        
+
         return $newWhere;
     }
 
@@ -293,8 +440,26 @@ class QueryBuilder extends Object
                 $params[$i] = ['N' => $value];
             } elseif (is_string($value)) {
                 $params[$i] = ['S' => $value];
+            } elseif (is_bool($value)) {
+                $params[$i] = ['BOOL' => $value];
+            } elseif (is_array($value)) {
+                $subValue = current($value);
+                if (is_array($subValue)) {
+                    if (ArrayHelper::isIndexed($value)) {
+                        $params[$i] = ['L' => $value];
+                    } else {
+                        $params[$i] = ['M' => $value];
+                    }
+                    continue;
+                } elseif (is_int($subValue)) {
+                    $params[$i] = ['NS' => $value];
+                } elseif (is_string($subValue)) {
+                    $params[$i] = ['SS' => $value];
+                } else {
+                    $params[$i] = ['BS' => $value];
+                }
             } else {
-                throw new Exception('Unsupported value type.');
+                $params[$i] = ['B' => $value];
             }
         }
         return $params;
@@ -309,6 +474,8 @@ class QueryBuilder extends Object
      */
     public function buildCondition($condition, &$params)
     {
+        // TODO Convert key name which conflict with reserved key word
+        // http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/ReservedWords.html
         if (!is_array($condition)) {
             return (string) $condition;
         } elseif (empty($condition)) {
@@ -549,8 +716,7 @@ class QueryBuilder extends Object
         if (count($operands) !== 2) {
             throw new InvalidParamException("Function '$func' requires exactly two operands.");
         }
-        $phName1 = self::PARAM_PREFIX . count($params);
-        $params[$phName1] = $operands[0];
+        $phName1 = $operands[0];
         $phName2 = self::PARAM_PREFIX . count($params);
         $params[$phName2] = $operands[1];
         $func = strtolower($func);
@@ -614,12 +780,20 @@ class QueryBuilder extends Object
         }
         if (!empty($query->indexBy)) {
             if (is_callable($query->indexBy)) {
-                throw new InvalidArgumentException('Cannot combine callable parameter.');
+                throw new InvalidArgumentException('Cannot using callable parameter.');
             }
             $options = array_merge($options, ['IndexName' => $query->indexBy]);
         }
         if (!empty($query->limit)) {
             $options = array_merge($options, ['Limit' => (int) $query->limit]);
+        }
+        if (!empty($query->offset)) {
+            if (!is_array($query->offset)) {
+                throw new InvalidArgumentException(
+                    'Missed associative array of keys mapping.'
+                );
+            }
+            $options = array_merge($options, ['ExclusiveStartKey' => $query->offset]);
         }
         if (!is_null($query->consistentRead)) {
             if (!is_bool($query->consistentRead)) {
@@ -639,7 +813,7 @@ class QueryBuilder extends Object
             }
             $options['ReturnConsumedCapacity'] = $query->returnConsumedCapacity;
         }
-        
+
         return array_merge($options, $this->buildProjection($query));
     }
 
@@ -822,13 +996,13 @@ class QueryBuilder extends Object
     public function batchGetItem($table, array $keys, array $options = [], array $requestItemOptions = [])
     {
         $name = 'BatchGetItem';
-        
+
         $tableArgument = [
             $table => array_merge([
                 'Keys' => $this->buildBatchKeyArgument($table, $keys),
             ], $requestItemOptions)
         ];
-        
+
         $argument = array_merge(['RequestItems' => $tableArgument], $options);
         return [$name, $argument];
     }
@@ -843,7 +1017,7 @@ class QueryBuilder extends Object
     {
         $tableDescription = $this->db->createCommand()->describeTable($table)->execute();
         $keySchema = $tableDescription['Table']['KeySchema'];
-        
+
         if (ArrayHelper::isIndexed($keys)) {
             $isScalar = is_string($keys[0]) || is_numeric($keys[0]);
             if ($isScalar) {
