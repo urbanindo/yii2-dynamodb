@@ -103,6 +103,9 @@ class Pagination extends \yii\data\Pagination
                 $absolute
             )
         ];
+        
+        $links[self::LINK_FIRST] = $this->createUrl(null, $pageSize, $absolute);
+        
         if (($nextLastKey = $this->getNextLastKey()) !== null) {
             $links[self::LINK_NEXT] = $this->createUrl($nextLastKey, $pageSize, $absolute);
         }
@@ -151,13 +154,13 @@ class Pagination extends \yii\data\Pagination
     
     /**
      * Stores the next last key.
-     * @var string
+     * @var string|string[]
      */
     private $_nextLastKey;
     
     /**
      * Returns the next last key.
-     * @return string
+     * @return string|string[]
      */
     public function getNextLastKey()
     {
@@ -166,7 +169,7 @@ class Pagination extends \yii\data\Pagination
     
     /**
      * Sets the next last key. This has to be set manually in the data provider.
-     * @param string $value The last key that was evaluated by DynamoDB.
+     * @param string|string[] $value The last key that was evaluated by DynamoDB.
      * @return void
      */
     public function setNextLastKey($value)

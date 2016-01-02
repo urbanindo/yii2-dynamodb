@@ -78,6 +78,7 @@ class PaginationTest extends TestCase
                 5,
                 null,
                 [
+                    'first' => '/index.php?r=item%2Flist',
                     'self' => '/index.php?r=item%2Flist',
                     'next' => '/index.php?r=item%2Flist&last-key=5',
                 ]
@@ -87,6 +88,7 @@ class PaginationTest extends TestCase
                 10,
                 null,
                 [
+                    'first' => '/index.php?r=item%2Flist',
                     'self' => '/index.php?r=item%2Flist&last-key=5',
                     'next' => '/index.php?r=item%2Flist&last-key=10',
                 ]
@@ -96,6 +98,7 @@ class PaginationTest extends TestCase
                 10,
                 10,
                 [
+                    'first' => '/index.php?r=item%2Flist&per-page=10',
                     'self' => '/index.php?r=item%2Flist&last-key=5&per-page=10',
                     'next' => '/index.php?r=item%2Flist&last-key=10&per-page=10',
                 ]
@@ -105,6 +108,7 @@ class PaginationTest extends TestCase
                 ['a', 'f'],
                 10,
                 [
+                    'first' => '/index.php?r=item%2Flist&per-page=10',
                     'self' => '/index.php?r=item%2Flist&last-key%5B0%5D=a&last-key%5B1%5D=b&per-page=10',
                     'next' => '/index.php?r=item%2Flist&last-key%5B0%5D=a&last-key%5B1%5D=f&per-page=10',
                 ]
