@@ -3,10 +3,10 @@
 This is a DynamoDB extension for Yii2
 
 
-[![Latest Stable Version](https://poser.pugx.org/urbanindo/yii2-dynamodb/v/stable.svg)](https://packagist.org/packages/urbanindo/yii2-queue)
-[![Total Downloads](https://poser.pugx.org/urbanindo/yii2-dynamodb/downloads.svg)](https://packagist.org/packages/urbanindo/yii2-queue)
-[![Latest Unstable Version](https://poser.pugx.org/urbanindo/yii2-dynamodb/v/unstable.svg)](https://packagist.org/packages/urbanindo/yii2-queue)
-[![Build Status](https://travis-ci.org/urbanindo/yii2-dynamodb.svg)](https://travis-ci.org/urbanindo/yii2-queue)
+[![Latest Stable Version](https://poser.pugx.org/urbanindo/yii2-dynamodb/v/stable.svg)](https://packagist.org/packages/urbanindo/yii2-dynamodb)
+[![Total Downloads](https://poser.pugx.org/urbanindo/yii2-dynamodb/downloads.svg)](https://packagist.org/packages/urbanindo/yii2-dynamodb)
+[![Latest Unstable Version](https://poser.pugx.org/urbanindo/yii2-dynamodb/v/unstable.svg)](https://packagist.org/packages/urbanindo/yii2-dynamodb)
+[![Build Status](https://travis-ci.org/urbanindo/yii2-dynamodb.svg)](https://travis-ci.org/urbanindo/yii2-dynamodb)
 
 ## Requirement
 
@@ -60,20 +60,20 @@ return [
 
 ## Limitation
 
-Because DynamoDB have different behavior with MySQL in general, there are several
+Because DynamoDB have different behavior from MySQL, there are several
 limitations or behavior change applied. There are several method to get data from
 DynamoDB: __GetItem__, __BatchGetItem__, __Scan__, and __Query__.
 
-1. We have tried to implement automatic method to acquire model from Query. You have
-to assign method explicitly when you want to force method in use.
+1. We have tried to implement automatic method to acquire model from Query. You should
+assign method explicitly if you want to force the method to use.
 2. Not yet support attribute name aliasing (In MySQL known as field aliasing).
-3. When using __Query__ method, in where condition should using just key attributes.
-In next roll out will add filtering with non key attributes.
-4. To make pagination, we recommend using Query method when want to filter result.
-If you use filtering with non key attribute, it is possible result the model(s) less
-than desired limit value.
-5. `indexBy` and `orderBy` cannot use by attribute string value or callable parameter.
+3. When using __Query__ method, where condition just support filter by key attributes.
+In next roll out we will add filtering with non key attributes.
+4. To make pagination, we forcedly using __Query__ method when WHERE condition is set.
+Because if you use filtering with non key attribute, it is possible the model result(s)
+will less than desired limit value.
+5. `indexBy` and `orderBy` cannot use with attribute string value or callable parameter.
 This will use as string value and assign to `IndexName` parameter in DynamoDB. To
-use sorting, it will use __QUERY__ method and `orderBy` parameter should be either
-`['myIndex' => 'ASC']` or `['myIndex', 'ASC']`.
-6. Not support NULL type attribute.
+use sorting, this will forcedly use __QUERY__ method and `orderBy` parameter should be
+either `['myIndex' => 'ASC']` or `['myIndex', 'DESC']`.
+6. Not support NULL and any kind of set attribute type.

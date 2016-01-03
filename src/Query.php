@@ -107,7 +107,7 @@ class Query extends Component implements QueryInterface
             $db = Yii::$app->get('dynamodb');
         }
         list($name, $argument) = $db->getQueryBuilder()->build($this);
-        
+
         return $db->createCommand([
             'name' => $name,
             'argument' => $argument,
@@ -320,9 +320,7 @@ class Query extends Component implements QueryInterface
      */
     public function one($db = null)
     {
-        if (in_array($this->using, [self::USING_QUERY, self::USING_SCAN])) {
-            $this->limit(1);
-        }
+        $this->limit(1);
         $response = $this->execute($db);
         $rows = $this->getItemsFromResponse($response);
         if (empty($rows)) {

@@ -81,7 +81,7 @@ class QueryBuilder extends Object
                     || !empty($query->offset) || !empty($query->orderBy)
                     || $keyCondition != 1 || !$supportBatchGetItem) {
                 // TODO WARNING AWS SDK not support operator beside '=' for key
-                if (empty($query->orderBy) && ($keyCondition > 0) && $supportBatchGetItem) {
+                if (!empty($query->orderBy) && ($keyCondition == 1) && $supportBatchGetItem) {
                     $query->using = Query::USING_QUERY;
                 } else {
                     $query->using = Query::USING_SCAN;
@@ -769,8 +769,12 @@ class QueryBuilder extends Object
                     $sort = current($query->orderBy);
                 }
             } else {
-                list($index, $sort) = explode(' ', $query->orderBy, 2);
-                $query->indexBy = $index;
+                if (in_array(strtoupper($query->orderBy), ['ASC', 'DESC'])) {
+                    $sort = $query->orderBy;
+                } else {
+                    list($index, $sort) = explode(' ', $query->orderBy, 2);
+                    $query->indexBy = $index;
+                }
             }
             $sort = strtoupper($sort);
             if (!in_array($sort, ['ASC', 'DESC'])) {
