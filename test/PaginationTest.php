@@ -4,7 +4,7 @@ use UrbanIndo\Yii2\DynamoDb\Pagination;
 
 class PaginationTest extends TestCase
 {
-    
+
     protected function setUp()
     {
         parent::setUp();
@@ -16,7 +16,7 @@ class PaginationTest extends TestCase
             ],
         ]);
     }
-    
+
     /**
      * Data provider for [[testCreateUrl()]]
      * @return array test data
@@ -49,12 +49,17 @@ class PaginationTest extends TestCase
                 5,
                 '/index.php?r=item%2Flist&last-key%5B0%5D=a&last-key%5B1%5D=f&per-page=5',
             ],
+            [
+                ['attr1' => 'a', 'attr2' => 'f'],
+                5,
+                '/index.php?r=item%2Flist&last-key%5Battr1%5D=a&last-key%5Battr2%5D=f&per-page=5',
+            ],
         ];
     }
-    
+
     /**
      * @dataProvider dataProviderCreateUrl
-     * 
+     *
      * @param string|string[] $lastKey
      * @param integer $pageSize
      * @param string $expectedUrl
@@ -65,7 +70,7 @@ class PaginationTest extends TestCase
         $pagination->route = 'item/list';
         $this->assertEquals($expectedUrl, $pagination->createUrl($lastKey, $pageSize));
     }
-    
+
     /**
      * Data provider for [[testCreateUrl()]]
      * @return array test data
@@ -112,13 +117,23 @@ class PaginationTest extends TestCase
                     'self' => '/index.php?r=item%2Flist&last-key%5B0%5D=a&last-key%5B1%5D=b&per-page=10',
                     'next' => '/index.php?r=item%2Flist&last-key%5B0%5D=a&last-key%5B1%5D=f&per-page=10',
                 ]
+            ],
+            [
+                ['attr1' => 'a', 'attr2' => 'b'],
+                ['attr1' => 'a', 'attr2' => 'f'],
+                10,
+                [
+                    'first' => '/index.php?r=item%2Flist&per-page=10',
+                    'self' => '/index.php?r=item%2Flist&last-key%5Battr1%5D=a&last-key%5Battr2%5D=b&per-page=10',
+                    'next' => '/index.php?r=item%2Flist&last-key%5Battr1%5D=a&last-key%5Battr2%5D=f&per-page=10',
+                ]
             ]
         ];
     }
-    
+
     /**
      * @dataProvider dataProviderGetLinks
-     * 
+     *
      * @param string|string[] $currentLastKey The current last key.
      * @param string|string[] $nextLastKey    The next last key.
      * @param integer         $pageSize       The page size to show.
@@ -132,7 +147,7 @@ class PaginationTest extends TestCase
             'nextLastKey' => $nextLastKey,
             'pageSize' => $pageSize,
         ]);
-        
+
         $this->assertEquals($links, $pagination->getLinks());
     }
 }
