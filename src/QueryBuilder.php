@@ -11,6 +11,7 @@ use yii\base\Object;
 use yii\helpers\ArrayHelper;
 use yii\base\InvalidParamException;
 use InvalidArgumentException;
+use Exception;
 
 /**
  * QueryBuilder builds an elasticsearch query based on the specification given
@@ -80,7 +81,8 @@ class QueryBuilder extends Object
             if (empty($query->where) || !empty($query->indexBy) || !empty($query->limit)
                     || !empty($query->offset) || !empty($query->orderBy)
                     || $keyCondition != 1 || !$supportBatchGetItem) {
-                // TODO WARNING AWS SDK not support operator beside '=' for key
+                // WARNING AWS SDK not support operator beside '=' if use Query method
+                // TODO Slice where clause query
                 if (!empty($query->orderBy) && ($keyCondition == 1) && $supportBatchGetItem) {
                     $query->using = Query::USING_QUERY;
                 } else {
@@ -131,6 +133,7 @@ class QueryBuilder extends Object
                     }
                 }
             }
+            return true;
         }
 
         return false;
@@ -435,6 +438,8 @@ class QueryBuilder extends Object
      */
     public function paramToExpressionAttributeValues($params)
     {
+        // TODO Supporting attribute type detection beside single numeric, single
+        // string, and single boolean
         foreach ($params as $i => $value) {
             if (is_int($value)) {
                 $params[$i] = ['N' => $value];
@@ -762,8 +767,12 @@ class QueryBuilder extends Object
             $sort = '';
             if (is_array($query->orderBy)) {
                 if (ArrayHelper::isIndexed($query->orderBy)) {
-                    $query->indexBy = $query->orderBy[0];
-                    $sort = $query->orderBy[1];
+                    if (sizeof($query->orderBy) > 1) {
+                        $query->indexBy = $query->orderBy[0];
+                        $sort = $query->orderBy[1];
+                    } else {
+                        $sort = $query->orderBy[0];
+                    }
                 } else {
                     $query->indexBy = key($query->orderBy);
                     $sort = current($query->orderBy);
@@ -780,13 +789,14 @@ class QueryBuilder extends Object
             if (!in_array($sort, ['ASC', 'DESC'])) {
                 throw new InvalidArgumentException('Sort key unknown: ' . reset($query->orderBy));
             }
-            $options['ScanIndexForward'] = ($sort == 'ASC');
+            $options['ScanIndexForward'] = ($sort != 'ASC');
         }
         if (!empty($query->indexBy)) {
             if (is_callable($query->indexBy)) {
                 throw new InvalidArgumentException('Cannot using callable parameter.');
             }
             $options = array_merge($options, ['IndexName' => $query->indexBy]);
+            $query->indexBy = null;
         }
         if (!empty($query->limit)) {
             $options = array_merge($options, ['Limit' => (int) $query->limit]);
