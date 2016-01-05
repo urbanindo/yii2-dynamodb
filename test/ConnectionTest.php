@@ -3,6 +3,7 @@
 class ConnectionTest extends TestCase {
     
     public function testConnectionClient() {
+        $faker = Faker\Factory::create();
         $component = new \UrbanIndo\Yii2\DynamoDb\Connection([
             'config' => [
                 'credentials' => [
@@ -16,7 +17,7 @@ class ConnectionTest extends TestCase {
         ]);
         $client = $component->getClient();
         $command = $client->getCommand('CreateTable', [
-            'TableName' => 'Testing',
+            'TableName' => $faker->uuid,
             'KeySchema' => [
                 [
                     'AttributeName' => 'Test1',

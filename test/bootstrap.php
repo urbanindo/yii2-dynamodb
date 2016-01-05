@@ -17,19 +17,4 @@ Yii::setAlias('@test', __DIR__);
 $application = new \yii\console\Application([
     'id' => 'Yii2 DynamoDB Test',
     'basePath' => dirname(__FILE__),
-    'components' => [
-        'dynamodb' => [
-            /* @var $dynamodb \UrbanIndo\Yii2\DynamoDb\Connection */
-            'class' => '\UrbanIndo\Yii2\DynamoDb\Connection',
-            'config' => [
-                'credentials' => [
-                    'key' => 'AKIA',
-                    'secret' => '1234567890',
-                ],
-                'region' => 'ap-southeast-1',
-                'version' => 'latest',
-                'endpoint' => DYNAMODB_URL,
-            ]
-        ]
-    ]
 ]);

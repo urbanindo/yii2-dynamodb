@@ -49,6 +49,12 @@
             </finally>
         </trycatch>
     </target>
+    <target name="phpcs">
+        <exec executable="${basedir}/vendor/bin/phpcs" failonerror="true">
+            <arg value="--standard=${basedir}/ruleset.xml"/>
+            <arg value="src"/>
+        </exec>
+    </target>
     <target name="prepare">
         <mkdir dir="${basedir}/dynamodb"/>
         <get dest="dynamodb/ant-contrib.jar" >

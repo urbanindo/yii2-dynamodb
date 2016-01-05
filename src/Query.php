@@ -1,8 +1,9 @@
 <?php
-
 /**
+ * Query class file.
  * @author Petra Barus <petra.barus@gmail.com>
  */
+
 namespace UrbanIndo\Yii2\DynamoDb;
 
 use Yii;
@@ -10,21 +11,51 @@ use yii\base\Component;
 use yii\db\QueryInterface;
 use yii\db\QueryTrait;
 use yii\base\NotSupportedException;
+use yii\helpers\ArrayHelper;
 
 /**
- * Description of Query
+ * Query represents item fetching operation from DynamoDB table.
  *
  * @author Petra Barus <petra.barus@gmail.com>
  */
 class Query extends Component implements QueryInterface
 {
-    use QueryTrait;
-    
-    const TYPE_BATCH_GET = 'BatchGetItem';
-    const TYPE_GET = 'GetItem';
-    const TYPE_QUERY = 'Query';
-    const TYPE_SCAN = 'Scan';
 
+    use QueryTrait;
+
+    /**
+     * If the query is BatchGetItem operation, meaning the query is for multiple item using keys.
+     * @link http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchGetItem.html
+     */
+    const USING_BATCH_GET_ITEM = 'BatchGetItem';
+
+    /**
+     * If the query is GetItem operation, meaning the query is for a single item using the key.
+     * @link http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_GetItem.html
+     */
+    const USING_GET_ITEM = 'GetItem';
+
+    /**
+     * If the query is Query operation, meaning it uses primary key or secondary key from the table.
+     * @link http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Query.html
+     */
+    const USING_QUERY = 'Query';
+
+    /**
+     * If the query is Scan operation, meaning it will access every item in the table.
+     * @link http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Query.html
+     */
+    const USING_SCAN = 'Scan';
+
+    /**
+     * This will try to detect the auto.
+     */
+    const USING_AUTO = 'Auto';
+
+    /**
+     * The name of the key of the row to store the response data.
+     */
+    const RESPONSE_KEY_PARAM = '_response';
 
     /**
      * Array of attributes being selected. It will be used to build Projection Expression.
@@ -33,74 +64,90 @@ class Query extends Component implements QueryInterface
     public $select = [];
 
     /**
-     * @var string Type of query that will be executed, 'Get', 'BatchGet', 'Query', or 'Scan'. Defaults to 'BatchGet'
+     * Type of query that will be executed, 'Get', 'BatchGet', 'Query', or 'Scan'. Defaults to 'BatchGet'.
+     * @var string
      * @see from()
      */
-    public $using = self::TYPE_SCAN;
+    public $using = self::USING_AUTO;
 
     /**
-     * @var array list of query parameter values indexed by parameter placeholders.
-     * For example, `[':name' => 'Dan', ':age' => 31]`.
-     */
-    public $expressionAttributesNames = [];
-    
-    /**
-     * 
-     */
-    public $expressionAttributesValues = [];
-    
-    /**
-     *
-     * @var type 
+     * Whether to use consistent read or not.
+     * @var boolean
      */
     public $consistentRead;
-    
+
     /**
-     *
-     * @var type 
+     * Whether to return consumed capacity or not.
+     * @var boolean
      */
     public $returnConsumedCapacity;
-    
+
     /**
-     *
-     * @var type 
+     * The table to query on.
+     * @var string
      */
     public $from;
-    
+
     /**
-     *
-     * @var type 
+     * Whether to store response data in the data returned. This can be either boolean
+     * false if not to store response data or the key of the response to store.
+     * @var array|boolean
      */
-    public $keys = [];
-    
+    public $storeResponseData = ['ConsumedCapacity', 'LastEvaluatedKey', 'ScannedCount', 'Count'];
+
     /**
-     * Executes the query and returns all results as an array.
-     * @param Connection $db the database connection used to execute the query.
-     * If this parameter is not given, the `dynamodb` application component will be used.
-     * @return Command
+     * Creates a DB command that can be used to execute this query.
+     * @param Connection $db The database connection used to generate the SQL statement.
+     * If this parameter is not given, the `db` application component will be used.
+     * @return Command the created DB command instance.
      */
-    public function createCommand($db = null)
+    public function createCommand(Connection $db = null)
     {
         if ($db === null) {
             $db = Yii::$app->get('dynamodb');
         }
-        $config = $db->getQueryBuilder()->build($this);
+        list($name, $argument) = $db->getQueryBuilder()->build($this);
 
-        return $db->createCommand($config);
+        return $db->createCommand([
+            'name' => $name,
+            'argument' => $argument,
+        ]);
     }
-    
+
+
     /**
-     * Identifies one or more attributes to retrieve from the table. 
-     * These attributes can include scalars, sets, or elements of a JSON document. 
-     * 
-     * @param string|array $attributes the attributes to be selected. Attributes can be specified in either a string separated with comma (e.g. "id, name") or an array (e.g. ['id', 'name']). see http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.AccessingItemAttributes.html
-     * @param array $expression expression attributes name. see http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/ExpressionPlaceholders.html#ExpressionAttributeNames (e.g. [''MyKey' => '#mk']
-     * @return Query
+     * Creates command and execute the query.
+     * @param Connection $db The database connection used.
+     * @return array The raw response.
      */
-    public function select($attributes, $expression = [])
+    public function execute(Connection $db = null)
+    {
+        $command = $this->createCommand($db);
+        return $command->execute();
+    }
+
+    /**
+     * Identifies one or more attributes to retrieve from the table.
+     * These attributes can include scalars, sets, or elements of a JSON document.
+     *
+     * @param string|array $attributes The attributes to be selected.
+     * Attributes can be specified in either a string separated with comma (e.g. "id, name")
+     * or an array (e.g. ['id', 'name']).
+     * See http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.AccessingItemAttributes.html .
+     * @param array        $expression Expression attributes name.
+     * See http://amzn.to/1JFZP1n
+     * (e.g. [''MyKey' => '#mk'].
+     * @return static
+     */
+    public function select($attributes, array $expression = [])
     {
         if (!is_array($attributes)) {
-            $attributes = preg_split('/\s*,\s*/', trim($attributes), -1, PREG_SPLIT_NO_EMPTY);
+            $attributes = preg_split(
+                '/\s*,\s*/',
+                trim($attributes),
+                -1,
+                PREG_SPLIT_NO_EMPTY
+            );
         }
         if (empty($this->select)) {
             $this->select = $attributes;
@@ -112,26 +159,18 @@ class Query extends Component implements QueryInterface
                 $this->withExpressionAttributesName($exp, $alias);
             }
         }
-        
+
         return $this;
     }
 
-    public function from($tableName) {
-        $this->from = $tableName;
-    }
-
-    public function using($queryType)
+    /**
+     * Sets the table name for the query.
+     * @param string|array $table The table(s) to be selected from.
+     * @return static the query object itself.
+     */
+    public function from($table)
     {
-        if (!in_array($queryType, [self::TYPE_BATCH_GET, self::TYPE_GET])) {
-            throw new NotSupportedException('only batch get and get that is currently supported');
-        }
-        $this->using = $queryType;
-        return $this;
-    }
-
-    public function withExpressionAttributesName($attributes, $alias)
-    {
-        $this->expressionAttributesNames[$attributes] = $alias;
+        $this->from = $table;
         return $this;
     }
 
@@ -139,7 +178,8 @@ class Query extends Component implements QueryInterface
      * Whether to use consistent read in the query.
      * @return static
      */
-    public function withConsistentRead() {
+    public function withConsistentRead()
+    {
         $this->consistentRead = true;
         return $this;
     }
@@ -148,59 +188,170 @@ class Query extends Component implements QueryInterface
      * Whether to not use consistent read in the query.
      * @return static
      */
-    public function withoutConsistentRead() {
+    public function withoutConsistentRead()
+    {
         $this->consistentRead = false;
         return $this;
     }
-    
+
     /**
-     * Whether to return the consumed capacity.
+     * Whether to use the consumed capacity.
+     * @param string $setConsumedCapacity String about consumed capacity.
+     * Available values are
+     * <ul>
+     *  <li>INDEXES</li>
+     *  <li>TOTAL</li>
+     *  <li>NONE</li>
+     * </ul>.
      * @return static
      */
-    public function withConsumedCapacity() {
-        $this->returnConsumedCapacity = true;
+    public function setConsumedCapacity($setConsumedCapacity)
+    {
+        $this->returnConsumedCapacity = $setConsumedCapacity;
         return $this;
     }
-    
+
     /**
-     * Whether not to return the consumed capacity.
-     * @return static
+     * @param array $response The raw response result from operation.
+     * @return array array of values.
      */
-    public function withoutConsumedCapacity() {
-        $this->returnConsumedCapacity = false;
+    public function getItemsFromResponse($response)
+    {
+        if (in_array($this->using, [self::USING_QUERY, self::USING_SCAN])) {
+            $rows = array_map(function ($item) {
+                return Marshaler::unmarshalItem($item);
+            }, $response['Items']);
+        } else if ($this->using == self::USING_BATCH_GET_ITEM) {
+            $rows = array_map(function ($item) {
+                return Marshaler::unmarshalItem($item);
+            }, $response['Responses'][$this->from]);
+        } else if ($this->using == self::USING_GET_ITEM) {
+            $row = Marshaler::unmarshalItem($response['Item']);
+            $rows = [$row];
+        }
+
+        $storedResponse = self::extractStoredResponseData($this->storeResponseData, $response);
+        if (!empty($storedResponse)) {
+            $rows = array_map(function ($row) use ($storedResponse) {
+                $row[self::RESPONSE_KEY_PARAM] = $storedResponse;
+                return $row;
+            }, $rows);
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @param mixed $responseKeys List of keys to store from operation response, false if don't want to store.
+     * @param array $response     The raw response from operation.
+     * @return array Stored response data.
+     */
+    private static function extractStoredResponseData($responseKeys, $response)
+    {
+        if ($responseKeys == false) {
+            return [];
+        }
+        $return = [];
+        foreach ($responseKeys as $key) {
+            if (empty($value = ArrayHelper::getValue($response, $key))) {
+                continue;
+            }
+            $return[$key] = $value;
+        }
+        return $return;
+    }
+
+    /**
+     * Prepares for building SQL.
+     * This method is called by [[QueryBuilder]] when it starts to build SQL from a query object.
+     * You may override this method to do some final preparation work when converting a query into a SQL statement.
+     * @param QueryBuilder $builder The query builder.
+     * @return $this a prepared query instance which will be used by [[QueryBuilder]] to build the SQL
+     */
+    public function prepare(QueryBuilder $builder)
+    {
         return $this;
+    }
+
+    /**
+     * Converts the raw query results into the format as specified by this query.
+     * This method is internally used to convert the data fetched from database
+     * into the format as required by this query.
+     * @param array $rows The rows resulted from response parsing.
+     * @return array the converted query result
+     */
+    public function populate($rows)
+    {
+        if ($this->indexBy === null) {
+            return $rows;
+        }
+        $result = [];
+        foreach ($rows as $row) {
+            if (is_string($this->indexBy)) {
+                $key = $row[$this->indexBy];
+            } else if (is_array($this->indexBy)) {
+                $key = $row[$this->indexBy[0]] . $row[$this->indexBy[1]];
+            } else {
+                $key = call_user_func($this->indexBy, $row);
+            }
+            $result[$key] = $row;
+        }
+        return $result;
     }
 
     /**
      * Returns all object that matches the query.
-     * @param Connection $db the dynamodb connection.
-     * @return
+     * @param Connection $db The dynamodb connection.
+     * @return array The query results. If the query results in nothing, an empty array will be returned.
      */
-    public function all($db = null) {
-        return $this->createCommand($db)->queryAll();
-    }
-
-    public function count($q = '*', $db = null) {
-        // TODO: only if query and scan operations.
-        // batch get assumes results equal to number of id and hash
-    }
-    
-    public function exists($db = null) {
-        return !empty($this->createCommand($db)->queryOne());
-    }
-
-    public function one($db = null) {
-        $this->using = self::TYPE_GET;
-        return $this->createCommand($db)->queryOne();
+    public function all($db = null)
+    {
+        $response = $this->execute($db);
+        $rows = $this->getItemsFromResponse($response);
+        return $this->populate($rows);
     }
 
     /**
-     * Starts a batch query. Doesn't necessarily have $batchSize size. 
-     * Will call one requests for each batch instead of calling until empty like all.
-     *
+     * Executes the query and returns a single row of result.
+     * @param Connection $db The database connection used to generate the SQL statement.
+     * If this parameter is not given, the `db` application component will be used.
+     * @return array|boolean the first row (in terms of an array) of the query result. False is returned if the query
+     * results in nothing.
      */
-    public function batch($batchSize = 100, $db = null)
+    public function one($db = null)
     {
-        // todo
+        $this->limit(1);
+        $response = $this->execute($db);
+        $rows = $this->getItemsFromResponse($response);
+        if (empty($rows)) {
+            return false;
+        }
+        return reset($rows) ?: null;
+    }
+
+    /**
+     * Returns a value indicating whether the query result contains any row of data.
+     * @param Connection $db The database connection used to generate the SQL statement.
+     * If this parameter is not given, the `db` application component will be used.
+     * @return boolean whether the query result contains any row of data.
+     */
+    public function exists($db = null)
+    {
+        $response = $this->execute($db);
+        $rows = $this->getItemsFromResponse($response);
+        return !empty($rows);
+    }
+
+    /**
+     * Returns the number of records.
+     * @param string     $q  The COUNT expression. This parameter is ignored by this implementation.
+     * @param Connection $db The database connection used to execute the query.
+     * If this parameter is not given, the `elasticsearch` application component will be used.
+     * @return void
+     * @throws NotSupportedException The count operation is not supported.
+     */
+    public function count($q = '*', $db = null)
+    {
+        throw new NotSupportedException('Count operation is not suppported.');
     }
 }

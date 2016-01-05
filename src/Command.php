@@ -1,10 +1,13 @@
 <?php
 /**
+ * Command class file.
  * @author Petra Barus <petra.barus@gmail.com>
  */
+
 namespace UrbanIndo\Yii2\DynamoDb;
 
 use Aws\DynamoDb\DynamoDbClient;
+use Aws\DynamoDb\Marshaler;
 use Guzzle\Service\Resource\Model;
 use Yii;
 use yii\base\NotSupportedException;
@@ -13,158 +16,114 @@ use yii\base\Object;
 /**
  * @author Petra Barus <petra.barus@gmail.com>
  */
-class Command extends Object {
-    
+class Command extends Object
+{
+
     /**
      * @var Connection
      */
     public $db;
-    public $method;
-    public $request;
+    
+    /**
+     * The name of the DynamoDB request. For example `CreateTable`, `GetItem`.
+     * @var string
+     */
+    public $name;
+    
+    /**
+     * The argument of the DynamoDB. This contains, for example `KeySchema`,
+     * `AttributeDefinitions`, etc.
+     * @var array
+     */
+    public $argument;
 
-    public function init() {
-    }
     /**
      * @return DynamoDbClient
      */
-    protected function getClient() {
+    protected function getClient()
+    {
         return $this->db->getClient();
     }
 
     /**
-     * 
-     * @return Model
+     * Execute the command.
+     * @return array The array result of the command execution.
      */
-    public function execute() {
-        Yii::info("{$this->method}: " . json_encode($this->request) , 'yii\db\Command::query');
-        $command = $this->getClient()->getCommand($this->method, $this->request);
-        return $this->getClient()->execute($command);
+    public function execute()
+    {
+        Yii::info("{$this->name}: " . json_encode($this->argument), '\UrbanIndo\Yii2\DynamoDb::execute');
+        $command = $this->getClient()->getCommand($this->name, $this->argument);
+        $result = $this->getClient()->execute($command);
+        /* @var $result \Guzzle\Service\Resource\Model */
+        return $result->toArray();
     }
     
     /**
-     * Create new table.
-     * @param string $tableName the name of the table.
-     * @param array $options valid options for `CreateTable` command.
+     * Specifies the command and the argument to be requested to DynamoDB.
+     * @param string $name     The command name.
+     * @param array  $argument The command argument.
+     * @return static
      */
-    public function createTable($tableName, $options) {
-        $command = $this->getClient()->getCommand('CreateTable', array_merge([
-                'TableName' => $tableName,
-            ],
-            $options));
-        return $this->getClient()->execute($command);
-    }
-    
-    /**
-     * @param string $tableName
-     * @param array $values
-     */
-    public function insert($tableName, $values) {
-        return $this->putItem($tableName, $values);
-    }
-    
-    /**
-     * @param string $tableName
-     * @param array $values
-     */
-    public function putItem($tableName, $values) {
-        $marshaler = new Marshaler();
-        $command = $this->getClient()->getCommand('PutItem', [
-            'TableName' => $tableName,
-            'Item' => $marshaler->marshalItem($values),
-        ]);
-        $marshaler->marshalItem($values);
-        try {
-            $this->getClient()->execute($command);
-            return true;
-        } catch (\Exception $exc) {
-            return false;
-        }
-    }
-    /**
-     * @param string $tableName
-     * @param array $values
-     */
-    public function putItems($tableName, $values) {
-        $unprocessedItems = [];
-        foreach ($values as $item) {
-            $unprocessedItems[] = [
-                'PutRequest' => [
-                    'Item' => Marshaler::marshal($item)
-                ]
-            ];
-                    
-        }
-        while (!empty($unprocessedItems)) {
-            $chunks = array_chunk($unprocessedItems, 25);
-            $unprocessedItems = [];
-            foreach ($chunks as $chunk) {
-                $request = [
-                    'RequestItems' => [
-                        $tableName => $chunk
-                    ]
-                ];
-                $command = $this->getClient()->getCommand('BatchWriteItem', $request);
-                $response = $this->getClient()->execute($command);
-                if (isset($response->get("UnprocessedItems")[$tableName])) {
-                    $unprocessedItems = $unprocessedItems + $response->get("UnprocessedItems")[$tableName];
-                }
-            }
-        }
-        return $response;
-    }
-    public function count() {
-        if ($this->method == Query::TYPE_GET) {
-            return 1;
-        } else if ($this->method == Query::TYPE_BATCH_GET) {
-            $tables = array_keys($this->request['RequestItems']);
-            $count = 0;
-            foreach ($tables as $keys) {
-                $count += count(reset($keys));
-            }
-            return $count;
-        } else {
-            // TODO use query Select => COUNT
-            throw new NotSupportedException('Not implemented yet');
-        }
+    public function setCommand($name, array $argument)
+    {
+        $this->name = $name;
+        $this->argument = $argument;
+        return $this;
     }
 
     /**
-     * Increase can be done unlimited time, decrease max 4 times a day
-     * @param string $tablename
-     * @param int $readThroughput
-     * @param int $writeThroughput
-     * @return array @see http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_TableDescription.html
+     * Create new table.
+     * @param string $table   The name of the table.
+     * @param array  $options Valid options for `CreateTable` command.
+     * @return static
      */
-    public function updateThroughput($tablename, $readThroughput, $writeThroughput) {
-        $request = [
-            'TableName' => $tablename,
-            'ProvisionedThroughput' => [
-                'ReadCapacityUnits' => $readThroughput,
-                'WriteCapacityUnits' => $writeThroughput
-            ]
-        ];
-        $command = $this->getClient()->getCommand('UpdateTable', $request);
-        return $this->getClient()->execute($command);
-    }
-    /**
-     * @param type $tableName
-     * @return array @see http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_TableDescription.html
-     */
-    public function describeTable($tableName) {
-        $command = $this->getClient()->getCommand('DescribeTable', [
-                'TableName' => $tableName,
-            ]);
-        return $this->getClient()->execute($command)->get('Table');
+    public function createTable($table, array $options)
+    {
+        list($name, $argument) = $this->db->getQueryBuilder()->createTable($table, $options);
+        return $this->setCommand($name, $argument);
     }
     
     /**
+     * Delete an existing table.
+     * @param string $table The name of the table.
+     * @return static
+     */
+    public function deleteTable($table)
+    {
+        list($name, $argument) = $this->db->getQueryBuilder()->deleteTable($table);
+        return $this->setCommand($name, $argument);
+    }
+    
+    /**
+     * Describe a table.
+     * @param string $table The name of the table.
+     * @return static
+     */
+    public function describeTable($table)
+    {
+        list($name, $argument) = $this->db->getQueryBuilder()->describeTable($table);
+        return $this->setCommand($name, $argument);
+    }
+    
+    /**
+     * @param string $table The name of the table.
+     * @return integer
+     */
+    public function getTableItemCount($table)
+    {
+        $description = $this->describeTable($table)->execute();
+        return $description['Table']['ItemCount'];
+    }
+
+    /**
      * Return whether a table exists or not.
-     * @param string $tableName the name of the table.
+     * @param string $table The name of the table.
      * @return boolean
      */
-    public function tableExists($tableName) {
+    public function tableExists($table)
+    {
         try {
-            $this->describeTable($tableName);
+            $this->describeTable($table)->execute();
             return true;
         } catch (\Aws\DynamoDb\Exception\ResourceNotFoundException $exc) {
             return false;
@@ -172,15 +131,85 @@ class Command extends Object {
     }
     
     /**
-     * 
-     * @return type
+     * Put a single item in the table.
+     * @param string $table   The name of the table.
+     * @param array  $value   The values to input.
+     * @param array  $options Additional options to the request argument.
+     * @return static
      */
-    public function queryOne() {
-        $response = $this->execute();
-        return $response;
+    public function putItem($table, array $value, array $options = [])
+    {
+        list($name, $argument) = $this->db->getQueryBuilder()->putItem($table, $value, $options);
+        return $this->setCommand($name, $argument);
     }
-    public function queryAll() {
-        $response = $this->execute();
-        return $response->get('Responses');
+    
+    /**
+     * Put multiple items in the table.
+     * @param string $table   The name of the table.
+     * @param array  $values  The values to input.
+     * @param array  $options Additional options to the request argument.
+     * @return static
+     */
+    public function batchPutItem($table, array $values, array $options = [])
+    {
+        list($name, $argument) = $this->db->getQueryBuilder()->batchPutItem($table, $values, $options);
+        return $this->setCommand($name, $argument);
+    }
+    
+    /**
+     * Put multiple items in the table.
+     * @param string $table   The name of the table.
+     * @param array  $keys    The keys of the row. This can be indexed array of
+     * scalar value, indexed array of array of scalar value, indexed array of
+     * associative array.
+     * @param array  $options Additional options to the request argument.
+     * @return static
+     */
+    public function batchDeleteItem($table, array $keys, array $options = [])
+    {
+        list($name, $argument) = $this->db->getQueryBuilder()->batchDeleteItem($table, $keys, $options);
+        return $this->setCommand($name, $argument);
+    }
+    
+    /**
+     * Get a single item from table.
+     * @param string $table   The name of the table.
+     * @param mixed  $key     The key of the row.
+     * @param array  $options Additional options to the request argument.
+     * @return static
+     */
+    public function getItem($table, $key, array $options = [])
+    {
+        list($name, $argument) = $this->db->getQueryBuilder()->getItem($table, $key, $options);
+        return $this->setCommand($name, $argument);
+    }
+    
+    /**
+     * Scan table.
+     * @param string $table   The name of the table.
+     * @param array  $options Options to the request argument.
+     * @return static
+     */
+    public function scan($table, array $options = [])
+    {
+        list($name, $argument) = $this->db->getQueryBuilder()->scan($table, $options);
+        return $this->setCommand($name, $argument);
+    }
+    
+    /**
+     * Get multiple items from table using keys.
+     *
+     * @param string $table   The name of the table.
+     * @param array  $keys    The keys of the row. This can be indexed array of
+     * scalar value, indexed array of array of scalar value, indexed array of
+     * associative array.
+     * @param array  $options Additional options to the request argument.
+     * @return static
+     * @see QueryBuilder::batchGetItem
+     */
+    public function batchGetItem($table, array $keys, array $options = [])
+    {
+        list($name, $argument) = $this->db->getQueryBuilder()->batchGetItem($table, $keys, $options);
+        return $this->setCommand($name, $argument);
     }
 }
