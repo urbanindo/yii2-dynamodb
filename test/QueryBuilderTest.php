@@ -7,7 +7,7 @@
 
 use UrbanIndo\Yii2\DynamoDb\Query;
 use UrbanIndo\Yii2\DynamoDb\QueryBuilder;
-use test\data\Customer;
+use test\data\CustomerRange as Customer;
 
 /**
  * PHP Unit Test Class for Query Builder
@@ -28,49 +28,9 @@ class QueryBuilderTest extends TestCase
      */
     public function setUp()
     {
+        parent::setUp();
         $this->db = $this->getConnection();
-        $command = $this->db->createCommand();
-        $faker = \Faker\Factory::create();
-        $tableName = Customer::tableName();
-        $fieldName1 = Customer::primaryKey()[0];
-        $index1 = Customer::secondaryIndex()[0];
-        $indexFieldName1 = Customer::keySecondayIndex()[$index1][0];
-
-        if (!$command->tableExists($tableName)) {
-            $command->createTable($tableName, [
-                'KeySchema' => [
-                    [
-                        'AttributeName' => $fieldName1,
-                        'KeyType' => 'HASH',
-                    ],
-                ],
-                'AttributeDefinitions' => [
-                    [
-                        'AttributeName' => $fieldName1,
-                        'AttributeType' => 'S',
-                    ],
-                    [
-                        'AttributeName' => $indexFieldName1,
-                        'AttributeType' => 'S',
-                    ],
-                ],
-                'LocalSecondaryIndexes' => [
-                    [
-                        'IndexName' => $index1,
-                        'KeySchema' => [
-                            [ 'AttributeName' => $index1, 'KeyType' => 'HASH' ]
-                        ],
-                        'Projection' => [
-                            'ProjectionType' => 'KEYS_ONLY'
-                        ],
-                    ],
-                ],
-                'ProvisionedThroughput' => [
-                    'ReadCapacityUnits' => 5,
-                    'WriteCapacityUnits' => 5,
-                ],
-            ])->execute();
-        }
+        parent::createCustomersRangeTable();
     }
 
     /**
@@ -143,16 +103,17 @@ class QueryBuilderTest extends TestCase
         $qb = $this->createQueryBuilder();
         $faker = \Faker\Factory::create();
         $id = $faker->firstNameFemale;
-        $query1 = $this->createQueryGetItem()->where(['id' => $id]);
-        $query2 = $this->createQueryGetItem()->where($id);
-        $query3 = $this->createQueryGetItem()->where($id)->withConsistentRead();
-        $query4 = $this->createQueryGetItem()->where($id)->withoutConsistentRead();
-        $query5 = $this->createQueryGetItem()->where($id)->setConsumedCapacity('NONE');
+        $query1 = $this->createQueryGetItem()->where(['id' => $id, 'name' => $id]);
+        $query2 = $this->createQueryGetItem()->where(['id' => $id, 'name' => $id]);
+        $query3 = $this->createQueryGetItem()->where(['id' => $id, 'name' => $id])->withConsistentRead();
+        $query4 = $this->createQueryGetItem()->where(['id' => $id, 'name' => $id])->withoutConsistentRead();
+        $query5 = $this->createQueryGetItem()->where(['id' => $id, 'name' => $id])->setConsumedCapacity('NONE');
 
         $expected = [
             'TableName' => Customer::tableName(),
             'Key' => [
-                'id' => ['S' => $id]
+                'id' => ['S' => $id],
+                'name' => ['S' => $id],
             ]
         ];
 
@@ -178,12 +139,13 @@ class QueryBuilderTest extends TestCase
         $faker = \Faker\Factory::create();
         $id = $faker->firstNameFemale;
         $query1 = $this->createQueryGetItem()->select(['id', 'name', 'contacts'])
-            ->where(['id' => $id]);
+            ->where(['id' => $id, 'name' => $id]);
 
         $expected = [
             'TableName' => Customer::tableName(),
             'Key' => [
-                'id' => ['S' => $id]
+                'id' => ['S' => $id],
+                'name' => ['S' => $id],
             ],
             'ProjectionExpression' => 'id, name, contacts',
         ];
@@ -200,18 +162,19 @@ class QueryBuilderTest extends TestCase
         $qb = $this->createQueryBuilder();
         $faker = \Faker\Factory::create();
         $id = $faker->firstNameFemale;
-        $query1 = $this->createQueryGetBatchItem()->where(['id' => $id]);
-        $query2 = $this->createQueryGetBatchItem()->where($id);
-        $query3 = $this->createQueryGetBatchItem()->where($id)->withConsistentRead();
-        $query4 = $this->createQueryGetBatchItem()->where($id)->withoutConsistentRead();
-        $query5 = $this->createQueryGetBatchItem()->where($id)->setConsumedCapacity('NONE');
+        $query1 = $this->createQueryGetBatchItem()->where(['id' => $id, 'name' => $id]);
+        $query2 = $this->createQueryGetBatchItem()->where(['id' => $id, 'name' => $id]);
+        $query3 = $this->createQueryGetBatchItem()->where(['id' => $id, 'name' => $id])->withConsistentRead();
+        $query4 = $this->createQueryGetBatchItem()->where(['id' => $id, 'name' => $id])->withoutConsistentRead();
+        $query5 = $this->createQueryGetBatchItem()->where(['id' => $id, 'name' => $id])->setConsumedCapacity('NONE');
 
         $expected = [
             'RequestItems' => [
                 Customer::tableName() => [
                     'Keys' => [
                         [
-                            'id' => ['S' => $id]
+                            'id' => ['S' => $id],
+                            'name' => ['S' => $id],
                         ]
                     ],
                 ]
@@ -529,6 +492,12 @@ class QueryBuilderTest extends TestCase
         $id = $faker->firstNameFemale;
         $query1 = $this->createQuery()->select(['id', 'name', 'contacts'])
             ->where(['name' => $id])->indexBy(Customer::secondaryIndex()[0]);
+        $query2 = $this->createQuery()->select(['id', 'name', 'contacts'])
+            ->where(['name' => $id])->orderBy(['ASC'])->indexBy(Customer::secondaryIndex()[0]);
+        $query3 = $this->createQuery()->select(['id', 'name', 'contacts'])
+            ->where(['name' => $id])->orderBy([Customer::secondaryIndex()[0] => 'ASC']);
+        $query4 = $this->createQuery()->select(['id', 'name', 'contacts'])
+            ->where(['name' => $id])->orderBy([Customer::secondaryIndex()[0] => 'DESC']);
 
         $expected = [
             'TableName' => Customer::tableName(),
@@ -541,6 +510,11 @@ class QueryBuilderTest extends TestCase
         ];
 
         $this->assertEquals($expected, $qb->build($query1)[1]);
+        $expected['ScanIndexForward'] = false;
+        $this->assertEquals($expected, $qb->build($query2)[1]);
+        $this->assertEquals($expected, $qb->build($query3)[1]);
+        $expected['ScanIndexForward'] = true;
+        $this->assertEquals($expected, $qb->build($query4)[1]);
     }
 
     /**
