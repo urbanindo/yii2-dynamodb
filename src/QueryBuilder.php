@@ -11,6 +11,7 @@ use yii\base\Object;
 use yii\helpers\ArrayHelper;
 use yii\base\InvalidParamException;
 use InvalidArgumentException;
+use Exception;
 
 /**
  * QueryBuilder builds an elasticsearch query based on the specification given
@@ -80,14 +81,19 @@ class QueryBuilder extends Object
             if (empty($query->where) || !empty($query->indexBy) || !empty($query->limit)
                     || !empty($query->offset) || !empty($query->orderBy)
                     || $keyCondition != 1 || !$supportBatchGetItem) {
-                // TODO WARNING AWS SDK not support operator beside '=' for key
+                // WARNING AWS SDK not support operator beside '=' if use Query method
+                // TODO Slice where clause query
                 if (!empty($query->orderBy) && ($keyCondition == 1) && $supportBatchGetItem) {
                     $query->using = Query::USING_QUERY;
                 } else {
                     $query->using = Query::USING_SCAN;
                 }
             } else {
-                $query->using = Query::USING_BATCH_GET_ITEM;
+                if ($this->isOperatorSupportOnlyGetItem($query->where)) {
+                    $query->using = Query::USING_GET_ITEM;
+                } else {
+                    $query->using = Query::USING_BATCH_GET_ITEM;
+                }
             }
         }
 
@@ -114,26 +120,54 @@ class QueryBuilder extends Object
         if (ArrayHelper::isIndexed($where)) {
             foreach ($where as $whereIndexedElement) {
                 if (is_array($whereIndexedElement)) {
-                    if (!$this->isOperatorSupportBatchGetItem($whereIndexedElement)) {
-                        return false;
-                    }
+                    return !$this->isOperatorSupportBatchGetItem($whereIndexedElement);
                 } else {
-                    if (in_array($whereIndexedElement, ['IN', '='])) {
-                        return true;
-                    }
+
+                    return in_array($whereIndexedElement, ['IN', '=']);
                 }
             }
         } else { // associative array remaining
             foreach ($where as $key => $whereElement) {
                 if (is_array($whereElement)) {
-                    if (!$this->isOperatorSupportBatchGetItem($whereElement)) {
-                        return false;
-                    }
+                    return !$this->isOperatorSupportBatchGetItem($whereElement);
+                } // else scalar value
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Find out where all operator condition is able to support BatchGetItem or not.
+     * @param array $where Where condition string.
+     * @return boolean True when operator support GetItem.
+     */
+    public function isOperatorSupportOnlyGetItem($where)
+    {
+        if (empty($where)) {
+            return false;
+        }
+        if (is_string($where) || is_numeric($where)) {
+            return true;
+        }
+        // Array type remaining
+        if (ArrayHelper::isIndexed($where)) {
+            foreach ($where as $whereIndexedElement) {
+                if (is_array($whereIndexedElement)) {
+                    return false;
+                } else {
+                    return in_array($whereIndexedElement, ['=']);
+                }
+            }
+        } else { // associative array remaining
+            foreach ($where as $key => $whereElement) {
+                if (is_array($whereElement)) {
+                    return false;
                 }
             }
         }
 
-        return false;
+        return true;
     }
 
     /**
@@ -147,12 +181,12 @@ class QueryBuilder extends Object
         if (is_array($query->where)) {
             foreach ($this->getKeySchema($query) as $keySchemaElement) {
                 $keySchema[] = $keySchemaElement['AttributeName'];
+                $allKeyTrue[$keySchemaElement['AttributeName']] = 0;
             }
-            $dummy = false;
             if (!is_array(current($query->where))) {
-                return $this->searchAttrInArray([$query->where], $keySchema, $dummy);
+                return $this->searchAttrInArray([$query->where], $keySchema, $allKeyTrue);
             } else {
-                return $this->searchAttrInArray($query->where, $keySchema, $dummy);
+                return $this->searchAttrInArray($query->where, $keySchema, $allKeyTrue);
             }
         }
 
@@ -161,46 +195,48 @@ class QueryBuilder extends Object
 
     /**
      * Search keys in where schema compare within key schema.
-     * @param array   $where       Where schema.
-     * @param array   $keySchema   Key schema.
-     * @param boolean $hasFoundKey Has found key or did not.
+     * @param array $where      Where schema.
+     * @param array $keySchema  Key schema.
+     * @param array $allKeyTrue Finding all key in KeySchema exist in where clause.
      * @return integer Return 0 if no match with key, 1 if match only key,
      * 2 if contain both key and non key.
      */
-    public function searchAttrInArray($where, $keySchema, &$hasFoundKey)
+    public function searchAttrInArray($where, $keySchema, &$allKeyTrue)
     {
-        foreach ($where as $whereElement) {
-            if (ArrayHelper::isIndexed($whereElement)) {
-                if (sizeof($whereElement) < 2) {
+        foreach ($where as $key => $whereElement) {
+            if (ArrayHelper::isIndexed($where)) {
+                if (is_string($whereElement) || is_numeric($whereElement)) {
                     continue;
                 }
-                if (!in_array($whereElement[1], $keySchema)) {
-                    if ($hasFoundKey) {
+                if (ArrayHelper::isIndexed($whereElement)) {
+                    $this->searchAttrInArray($whereElement, $keySchema, $allKeyTrue);
+                } else { // inner element is associative
+                    foreach ($whereElement as $attr => $val) {
+                        if (is_array($val)) {
+                            $this->searchAttrInArray($val, $keySchema, $allKeyTrue);
+                        }
+                        if (!in_array($attr, $keySchema)) {
+                            if (in_array(true, $allKeyTrue)) {
+                                return 2;
+                            }
+                        } else {
+                            $allKeyTrue[$attr] = 1;
+                        }
+                    }
+                }
+            } else { // associative
+                $this->searchAttrInArray($whereElement, $keySchema, $allKeyTrue);
+                if (!in_array($key, $keySchema)) {
+                    if (in_array(true, $allKeyTrue)) {
                         return 2;
                     }
                 } else {
-                    $hasFoundKey = true;
-                }
-            } else {
-                foreach ($whereElement as $attr => $val) {
-                    if (is_array($val)) {
-                        $tmp = $this->searchAttrInArray($val, $keySchema, $hasFoundKey);
-                        if ($hasFoundKey) {
-                            return $tmp;
-                        }
-                    }
-                    if (!in_array($attr, $keySchema)) {
-                        if ($hasFoundKey) {
-                            return 2;
-                        }
-                    } else {
-                        $hasFoundKey = true;
-                    }
+                    $allKeyTrue[$key] = 1;
                 }
             }
         }
 
-        return $hasFoundKey ? 1 : 0;
+        return !in_array(0, $allKeyTrue) ? 1 : in_array(1, $allKeyTrue) ? 2 : 0;
     }
 
     /**
@@ -212,7 +248,7 @@ class QueryBuilder extends Object
     public function getKeySchema(Query $query)
     {
         $tableDescription = $this->db->createCommand()->describeTable($query->from)->execute();
-        $options = $this->buildOptions($query);
+        $options = $this->buildOptions($query, false);
 
         if (isset($options['IndexName'])) {
             if (isset($tableDescription['Table']['LocalSecondaryIndexes'])) {
@@ -435,6 +471,8 @@ class QueryBuilder extends Object
      */
     public function paramToExpressionAttributeValues($params)
     {
+        // TODO Supporting attribute type detection beside single numeric, single
+        // string, and single boolean
         foreach ($params as $i => $value) {
             if (is_int($value)) {
                 $params[$i] = ['N' => $value];
@@ -749,12 +787,14 @@ class QueryBuilder extends Object
 
     /**
      * Generate options or addition information for DynamoDB query
-     * @param Query $query Object from which the query will be generated.
+     * @param Query   $query Object from which the query will be generated.
+     * @param boolean $clear Index by should clear after usage, this param
+     * give programmer options to clear or not.
      * @return array Another options which used in the query
      * @throws InvalidArgumentException Table name should be exist and IndexName
      * is string type, can not callable.
      */
-    public function buildOptions(Query $query)
+    public function buildOptions(Query $query, $clear = true)
     {
         $options = [];
 
@@ -762,8 +802,12 @@ class QueryBuilder extends Object
             $sort = '';
             if (is_array($query->orderBy)) {
                 if (ArrayHelper::isIndexed($query->orderBy)) {
-                    $query->indexBy = $query->orderBy[0];
-                    $sort = $query->orderBy[1];
+                    if (sizeof($query->orderBy) > 1) {
+                        $query->indexBy = $query->orderBy[0];
+                        $sort = $query->orderBy[1];
+                    } else {
+                        $sort = $query->orderBy[0];
+                    }
                 } else {
                     $query->indexBy = key($query->orderBy);
                     $sort = current($query->orderBy);
@@ -780,13 +824,16 @@ class QueryBuilder extends Object
             if (!in_array($sort, ['ASC', 'DESC'])) {
                 throw new InvalidArgumentException('Sort key unknown: ' . reset($query->orderBy));
             }
-            $options['ScanIndexForward'] = ($sort == 'ASC');
+            $options['ScanIndexForward'] = ($sort != 'ASC');
         }
         if (!empty($query->indexBy)) {
             if (is_callable($query->indexBy)) {
                 throw new InvalidArgumentException('Cannot using callable parameter.');
             }
             $options = array_merge($options, ['IndexName' => $query->indexBy]);
+            if ($clear) {
+                $query->indexBy = null;
+            }
         }
         if (!empty($query->limit)) {
             $options = array_merge($options, ['Limit' => (int) $query->limit]);

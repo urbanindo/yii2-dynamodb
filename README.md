@@ -75,5 +75,11 @@ will less than desired limit value.
 5. `indexBy` and `orderBy` cannot use with attribute string value or callable parameter.
 This will use as string value and assign to `IndexName` parameter in DynamoDB. To
 use sorting, this will forcedly use __QUERY__ method and `orderBy` parameter should be
-either `['myIndex' => 'ASC']` or `['myIndex', 'DESC']`.
+either `['myIndex' => 'ASC']` or `['myIndex', 'DESC']` and key condition expression
+should be defined.
 6. Not support NULL and any kind of set attribute type.
+7. Not support attribute aliasing belong to Reserve Keywords, which means all attributes
+do not using any [Reserve Keywords](http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/ReservedWords.html).
+8. When use LinkPager, do not forget use ActiveDataProvider from this package. When
+the pagination pass into any kind of Widget View, several components maybe unsupported
+like _SerialColumn_, unnecessary total items in summary, and sorting.

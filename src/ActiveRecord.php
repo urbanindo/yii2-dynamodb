@@ -174,10 +174,10 @@ class ActiveRecord extends BaseActiveRecord
     public static function primaryKey()
     {
         if (!isset(self::$_primaryKeys[get_called_class()])) {
-            $description = self::getDb()->createCommand()
-                    ->describeTable(self::tableName())
+            $description = static::getDb()->createCommand()
+                    ->describeTable(static::tableName())
                     ->execute();
-            $keySchema = $description['KeySchema'];
+            $keySchema = $description['Table']['KeySchema'];
             $keys = [];
             foreach ($keySchema as $key) {
                 $idx = $key['KeyType'] == 'HASH' ? 0 : 1;

@@ -20,13 +20,13 @@ class Pagination extends \yii\data\Pagination
      * @see params
      */
     public $lastKeyParam = 'last-key';
-    
+
     /**
      * @var boolean whether to always have the last-key parameter in the URL created by [[createUrl()]].
      * If false and [[lastKey]] is null, the lastKey parameter will not be put in the URL.
      */
     public $forceLastKeyParam = true;
-    
+
     /**
      * @var array parameters (name => value) that should be used to obtain the current page number
      * and to create new pagination URLs. If not set, all parameters from $_GET will be used instead.
@@ -37,7 +37,7 @@ class Pagination extends \yii\data\Pagination
      * while the element indexed by [[pageSizeParam]] is treated as the page size (defaults to [[defaultPageSize]]).
      */
     public $params;
-    
+
     /**
      * This will only return 1.
      * @return integer number of pages
@@ -46,7 +46,7 @@ class Pagination extends \yii\data\Pagination
     {
         return 1;
     }
-    
+
     /**
      * Creates the URL suitable for pagination with the specified page number.
      * This method is mainly called by pagers when creating URLs used to perform pagination.
@@ -64,7 +64,7 @@ class Pagination extends \yii\data\Pagination
             $request = Yii::$app->getRequest();
             $params = $request instanceof Request ? $request->getQueryParams() : [];
         }
-        
+
         if ($lastKey !== null || $this->forcePageParam) {
             $params[$this->lastKeyParam] = $lastKey;
         } else {
@@ -78,7 +78,7 @@ class Pagination extends \yii\data\Pagination
         } else {
             unset($params[$this->pageSizeParam]);
         }
-        
+
         $params[0] = $this->route === null ? Yii::$app->controller->getRoute() : $this->route;
         $urlManager = $this->urlManager === null ? Yii::$app->getUrlManager() : $this->urlManager;
         if ($absolute) {
@@ -87,7 +87,7 @@ class Pagination extends \yii\data\Pagination
             return $urlManager->createUrl($params);
         }
     }
-    
+
     /**
      * Returns just one link to the next page.
      * @param boolean $absolute Whether the generated URLs should be absolute.
@@ -103,15 +103,15 @@ class Pagination extends \yii\data\Pagination
                 $absolute
             )
         ];
-        
+
         $links[self::LINK_FIRST] = $this->createUrl(null, $pageSize, $absolute);
-        
+
         if (($nextLastKey = $this->getNextLastKey()) !== null) {
             $links[self::LINK_NEXT] = $this->createUrl($nextLastKey, $pageSize, $absolute);
         }
         return $links;
     }
-    
+
     /**
      * @return integer the limit of the data. This may be used to set the
      * LIMIT value for Query or Scan operation.
@@ -123,13 +123,13 @@ class Pagination extends \yii\data\Pagination
 
         return $pageSize < 1 ? -1 : $pageSize;
     }
-    
+
     /**
      * Stores the current last key.
      * @var string|string[]
      */
     private $_lastKey;
-    
+
     /**
      * Returns the last key evaluated in the DynamoDB.
      * @return string|string[]
@@ -137,11 +137,17 @@ class Pagination extends \yii\data\Pagination
     public function getLastKey()
     {
         if ($this->_lastKey === null) {
-            $this->setLastKey($this->getQueryParam($this->lastKeyParam));
+            if (($params = $this->params) === null) {
+                $request = Yii::$app->getRequest();
+                $params = $request instanceof \yii\web\Request ? $request->getQueryParams() : [];
+            }
+            if (isset($params[$this->lastKeyParam])) {
+                $this->setLastKey($params[$this->lastKeyParam]);
+            }
         }
         return $this->_lastKey;
     }
-    
+
     /**
      * Sets the current last key.
      * @param string|string[] $value The last key that was evaluated by DynamoDB.
@@ -151,13 +157,13 @@ class Pagination extends \yii\data\Pagination
     {
         $this->_lastKey = $value;
     }
-    
+
     /**
      * Stores the next last key.
      * @var string|string[]
      */
     private $_nextLastKey;
-    
+
     /**
      * Returns the next last key.
      * @return string|string[]
@@ -166,7 +172,7 @@ class Pagination extends \yii\data\Pagination
     {
         return $this->_nextLastKey;
     }
-    
+
     /**
      * Sets the next last key. This has to be set manually in the data provider.
      * @param string|string[] $value The last key that was evaluated by DynamoDB.
@@ -176,7 +182,7 @@ class Pagination extends \yii\data\Pagination
     {
         $this->_nextLastKey = $value;
     }
-    
+
     /**
      * This is shorthand for `getLastKey()`.
      * @return string

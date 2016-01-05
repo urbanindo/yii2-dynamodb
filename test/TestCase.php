@@ -4,7 +4,7 @@ use yii\helpers\ArrayHelper;
 
 abstract class TestCase extends \PHPUnit_Framework_TestCase
 {
-    
+
     /**
      * @return \UrbanIndo\Yii2\DynamoDb\Connection
      */
@@ -29,7 +29,7 @@ abstract class TestCase extends \PHPUnit_Framework_TestCase
         ]);
         return Yii::$app->dynamodb;
     }
-    
+
     /**
      * @return \UrbanIndo\Yii2\DynamoDb\Command
      */
@@ -37,20 +37,20 @@ abstract class TestCase extends \PHPUnit_Framework_TestCase
     {
         return $this->getConnection()->createCommand();
     }
-    
+
     public function getTableItemCount($tableName) {
         $tableDescription = $this->getConnection()->createCommand()->describeTable($tableName)->execute();
         return $tableDescription['Table']['ItemCount'];
     }
-    
-    
+
+
     public function createSimpleTableWithHashKey()
     {
         $command = $this->createCommand();
         $faker = \Faker\Factory::create();
         $tableName = $faker->uuid;
         $fieldName1 = $faker->firstNameMale;
-        
+
         $command->createTable($tableName, [
             'KeySchema' => [
                 [
@@ -69,10 +69,10 @@ abstract class TestCase extends \PHPUnit_Framework_TestCase
                 'WriteCapacityUnits' => 5,
             ]
         ])->execute();
-        
+
         return [$tableName, $fieldName1];
     }
-    
+
     public function createSimpleTableWithHashKeyAndRangeKey()
     {
         $command = $this->createCommand();
@@ -80,7 +80,7 @@ abstract class TestCase extends \PHPUnit_Framework_TestCase
         $tableName = $faker->uuid;
         $fieldName1 = $faker->firstNameMale;
         $fieldName2 = $faker->firstNameMale;
-        
+
         $command->createTable($tableName, [
             'KeySchema' => [
                 [
@@ -107,10 +107,10 @@ abstract class TestCase extends \PHPUnit_Framework_TestCase
                 'WriteCapacityUnits' => 5,
             ]
         ])->execute();
-        
+
         return [$tableName, $fieldName1, $fieldName2];
     }
-    
+
     protected function mockWebApplication($config = [], $appClass = '\yii\web\Application')
     {
         new $appClass(ArrayHelper::merge([
@@ -126,7 +126,7 @@ abstract class TestCase extends \PHPUnit_Framework_TestCase
             ]
         ], $config));
     }
-    
+
     protected function getVendorPath()
     {
         $vendor = dirname(dirname(__DIR__)) . '/vendor';
@@ -135,7 +135,7 @@ abstract class TestCase extends \PHPUnit_Framework_TestCase
         }
         return $vendor;
     }
-    
+
     protected function createCustomersTable()
     {
         $command = $this->createCommand();
@@ -155,6 +155,65 @@ abstract class TestCase extends \PHPUnit_Framework_TestCase
                 [
                     'AttributeName' => 'id',
                     'KeyType' => 'HASH',
+                ]
+            ],
+            'ProvisionedThroughput' => [
+                'ReadCapacityUnits' => 10,
+                'WriteCapacityUnits' => 10
+            ]
+        ])->execute();
+    }
+
+    protected function createCustomersRangeTable()
+    {
+        $command = $this->createCommand();
+        /* @var $command \UrbanIndo\Yii2\DynamoDb\Command */
+        $table = \test\data\CustomerRange::tableName();
+        if ($command->tableExists($table)) {
+            $command->deleteTable($table)->execute();
+        }
+        $index = \test\data\CustomerRange::secondaryIndex()[0];
+        $command->createTable($table, [
+            'AttributeDefinitions' => [
+                [
+                    'AttributeName' => \test\data\CustomerRange::primaryKey()[0],
+                    'AttributeType' => 'N'
+                ],
+                [
+                    'AttributeName' => \test\data\CustomerRange::primaryKey()[1],
+                    'AttributeType' => 'S'
+                ],
+                [
+                    'AttributeName' => \test\data\CustomerRange::keySecondayIndex()[$index][1],
+                    'AttributeType' => 'S'
+                ]
+            ],
+            'KeySchema' => [
+                [
+                    'AttributeName' => \test\data\CustomerRange::primaryKey()[0],
+                    'KeyType' => 'HASH',
+                ],
+                [
+                    'AttributeName' => \test\data\CustomerRange::primaryKey()[1],
+                    'KeyType' => 'RANGE',
+                ]
+            ],
+            'LocalSecondaryIndexes' => [
+                [
+                    'IndexName' => $index,
+                    'KeySchema' => [
+                        [
+                            'AttributeName' => \test\data\CustomerRange::keySecondayIndex()[$index][0],
+                            'KeyType' => 'HASH',
+                        ],
+                        [
+                            'AttributeName' => \test\data\CustomerRange::keySecondayIndex()[$index][1],
+                            'KeyType' => 'RANGE',
+                        ]
+                    ],
+                    'Projection' => [
+                        'ProjectionType' => 'ALL',
+                    ]
                 ]
             ],
             'ProvisionedThroughput' => [
