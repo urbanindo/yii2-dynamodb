@@ -62,7 +62,7 @@ class Pagination extends \yii\data\Pagination
         $pageSize = (int) $pageSize;
         if (($params = $this->params) === null) {
             $request = Yii::$app->getRequest();
-            $params = $request instanceof Request ? $request->getQueryParams() : [];
+            $params = $request instanceof \yii\web\Request ? $request->getQueryParams() : [];
         }
 
         if ($lastKey !== null || $this->forcePageParam) {
