@@ -59,12 +59,14 @@ class Query extends Component implements QueryInterface
 
     /**
      * Array of attributes being selected. It will be used to build Projection Expression.
+     *
      * @var array
      */
     public $select = [];
 
     /**
      * Type of query that will be executed, 'Get', 'BatchGet', 'Query', or 'Scan'. Defaults to 'BatchGet'.
+     *
      * @var string
      * @see from()
      */
@@ -72,28 +74,41 @@ class Query extends Component implements QueryInterface
 
     /**
      * Whether to use consistent read or not.
+     *
      * @var boolean
      */
     public $consistentRead;
 
     /**
      * Whether to return consumed capacity or not.
+     *
      * @var boolean
      */
     public $returnConsumedCapacity;
 
     /**
      * The table to query on.
+     *
      * @var string
      */
     public $from;
 
     /**
-     * Whether to store response data in the data returned. This can be either boolean
-     * false if not to store response data or the key of the response to store.
+     * Whether to store response data in the data returned. 
+     *
+     * This can be either boolean, false if not to store response data or the
+     * key of the response to store.
+     *
      * @var array|boolean
      */
     public $storeResponseData = ['ConsumedCapacity', 'LastEvaluatedKey', 'ScannedCount', 'Count'];
+    
+    /**
+     * Store the expression attribute names.
+     *
+     * @var array
+     */
+    public $expressionAttributeNames = [];
 
     /**
      * Creates a DB command that can be used to execute this query.
