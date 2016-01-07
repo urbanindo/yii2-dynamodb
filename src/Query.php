@@ -109,6 +109,12 @@ class Query extends Component implements QueryInterface
      * @var array
      */
     public $expressionAttributeNames = [];
+    
+    /**
+     * Provides an easy way to put additional arguments.
+     * @var array
+     */
+    public $additionalArguments = [];
 
     /**
      * Creates a DB command that can be used to execute this query.
@@ -206,6 +212,16 @@ class Query extends Component implements QueryInterface
     public function withoutConsistentRead()
     {
         $this->consistentRead = false;
+        return $this;
+    }
+    
+    /**
+     * Additional arguments.
+     * @param array $arguments Additional arguments.
+     * @return static
+     */
+    public function withAdditionalArguments(array $arguments) {
+        $this->additionalArguments = $arguments;
         return $this;
     }
 
@@ -370,3 +386,4 @@ class Query extends Component implements QueryInterface
         throw new NotSupportedException('Count operation is not suppported.');
     }
 }
+

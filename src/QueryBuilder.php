@@ -815,6 +815,7 @@ class QueryBuilder extends Object
         $this->buildConsistentRead($query, $options);
         $this->buildReturnConsumedCapacity($query, $options);
         $this->buildOptionsExpressionAttributeNames($query, $options);
+        $this->buildAdditionalArguments($query, $options);
 
         return array_merge($options, $this->buildProjection($query));
     }
@@ -971,6 +972,19 @@ class QueryBuilder extends Object
     {
         if (!empty($query->expressionAttributeNames)) {
             $options['ExpressionAttributeNames'] = $query->expressionAttributeNames;
+        }
+    }
+    
+    /**
+     * Attach the additional arguments.
+     * @param Query $query   The query to build.
+     * @param array $options The options for command that is being built.
+     * @return void
+     */
+    public function buildAdditionalArguments(Query $query, array &$options = [])
+    {
+        if (!empty($query->additionalArguments)) {
+            $options = array_merge($query->additionalArguments);
         }
     }
     
