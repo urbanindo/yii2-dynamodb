@@ -25,7 +25,7 @@ class QueryBuilder extends Object
      * The prefix for automatically generated query binding parameters.
      */
     const PARAM_PREFIX = ':dqp';
-    
+
     /**
      * The prefix for attribute name.
      */
@@ -807,7 +807,7 @@ class QueryBuilder extends Object
     public function buildOptions(Query $query, $clear = true)
     {
         $options = [];
-        
+
         $this->buildOrderBy($query, $options);
         $this->buildIndexBy($query, $options, $clear);
         $this->buildLimit($query, $options);
@@ -819,7 +819,7 @@ class QueryBuilder extends Object
 
         return array_merge($options, $this->buildProjection($query));
     }
-    
+
     /**
      * Build the `IndexName` option.
      * @param Query $query   The query to build.
@@ -859,9 +859,9 @@ class QueryBuilder extends Object
         if (!in_array($sort, ['ASC', 'DESC'])) {
             throw new InvalidArgumentException('Sort key unknown: ' . reset($query->orderBy));
         }
-        $options['ScanIndexForward'] = ($sort != 'ASC');
+        $options['ScanIndexForward'] = ($sort == 'ASC');
     }
-    
+
     /**
      * Build the `IndexName` option.
      * @param Query $query   The query to build.
@@ -873,7 +873,7 @@ class QueryBuilder extends Object
      */
     public function buildIndexBy(Query $query, array &$options = [], $clear = true)
     {
-        
+
         if (empty($query->indexBy)) {
             return;
         }
@@ -885,7 +885,7 @@ class QueryBuilder extends Object
             $query->indexBy = null;
         }
     }
-    
+
     /**
      * Build the `Limit` option.
      * @param Query $query   The query to build.
@@ -898,13 +898,13 @@ class QueryBuilder extends Object
             $options['Limit'] = (int) $query->limit;
         }
     }
-    
+
     /**
      * Build the `ExclusiveStartKey` option.
      * @param Query $query   The query to build.
      * @param array $options The options for command that is being built.
      * @return void
-     * @throws InvalidArgumentException The keys has to be 
+     * @throws InvalidArgumentException The keys has to be
      * associative array.
      */
     public function buildExclusiveStartKey(Query $query, array &$options = [])
@@ -919,7 +919,7 @@ class QueryBuilder extends Object
         }
         $options['ExclusiveStartKey'] = $query->offset;
     }
-    
+
     /**
      * Build the `ConsistentRead` option.
      * @param Query $query   The query to build.
@@ -939,7 +939,7 @@ class QueryBuilder extends Object
         }
         $options['ConsistentRead'] = $query->consistentRead;
     }
-    
+
     /**
      * Build the `ReturnConsumedCapacity` option.
      * @param Query $query   The query to build.
@@ -961,7 +961,7 @@ class QueryBuilder extends Object
         }
         $options['ReturnConsumedCapacity'] = $query->returnConsumedCapacity;
     }
-    
+
     /**
      * Build the `ExpressionAttributeNames` option.
      * @param Query $query   The query to build.
@@ -974,7 +974,7 @@ class QueryBuilder extends Object
             $options['ExpressionAttributeNames'] = $query->expressionAttributeNames;
         }
     }
-    
+
     /**
      * Attach the additional arguments.
      * @param Query $query   The query to build.
@@ -987,7 +987,7 @@ class QueryBuilder extends Object
             $options = array_merge($query->additionalArguments);
         }
     }
-    
+
     /**
      * Get subtitution for an attribute name.
      * @param Query  $query     The query to build.
@@ -1003,7 +1003,7 @@ class QueryBuilder extends Object
         $count = count($query->expressionAttributeNames);
         $newName = self::ATTRIBUTE_PREFIX . ($count + 1);
         $query->expressionAttributeNames[$newName] = $attribute;
-        
+
         return $newName;
     }
 
