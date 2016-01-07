@@ -1021,6 +1021,21 @@ class QueryBuilder extends Object
         $argument = array_merge(['TableName' => $table], $options);
         return [$name, $argument];
     }
+    
+    /**
+     * Builds a DynamoDB command to update table.
+     *
+     * @param string $table   The name of the table to be created.
+     * @param array  $options Options for the argument.
+     * @return array The update table request syntax. The first element is the name of the command,
+     * the second is the argument.
+     */
+    public function updateTable($table, array $options = [])
+    {
+        $name = 'UpdateTable';
+        $argument = array_merge(['TableName' => $table], $options);
+        return [$name, $argument];
+    }
 
     /**
      * Builds a DynamoDB command to describe table.
