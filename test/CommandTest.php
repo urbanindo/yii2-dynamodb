@@ -43,6 +43,79 @@ class CommandTest extends TestCase
     }
     
     /**
+     * @group updateTable
+     */
+    public function testUpdateTable()
+    {
+        $command = $this->createCommand();
+        list($tableName, $fieldName1) = $this->createSimpleTableWithHashKey();
+        $this->assertTrue($command->tableExists($tableName));
+        $result = $command->describeTable($tableName)->execute();
+        $this->assertArraySubset([
+            'Table' => [
+                'ProvisionedThroughput' => [
+                    'ReadCapacityUnits' => 5,
+                    'WriteCapacityUnits' => 5,
+                ]
+            ]
+        ], $result);
+        
+        $faker = Faker\Factory::create();
+        $read = $faker->numberBetween(1, 10);
+        $write = $faker->numberBetween(1, 10);
+        $command->updateTable($tableName, [
+            'ProvisionedThroughput' => [
+                'ReadCapacityUnits' => $read,
+                'WriteCapacityUnits' => $write,
+            ]
+        ])->execute();
+        
+        $result2 = $command->describeTable($tableName)->execute();
+        $this->assertArraySubset([
+            'Table' => [
+                'ProvisionedThroughput' => [
+                    'ReadCapacityUnits' => $read,
+                    'WriteCapacityUnits' => $write,
+                ]
+            ]
+        ], $result2);
+    }
+    
+    /**
+     * @group updateTable
+     */
+    public function testUpdateThroughput()
+    {
+        $command = $this->createCommand();
+        list($tableName, $fieldName1) = $this->createSimpleTableWithHashKey();
+        $this->assertTrue($command->tableExists($tableName));
+        $result = $command->describeTable($tableName)->execute();
+        $this->assertArraySubset([
+            'Table' => [
+                'ProvisionedThroughput' => [
+                    'ReadCapacityUnits' => 5,
+                    'WriteCapacityUnits' => 5,
+                ]
+            ]
+        ], $result);
+        
+        $faker = Faker\Factory::create();
+        $read = $faker->numberBetween(1, 10);
+        $write = $faker->numberBetween(1, 10);
+        $command->updateThroughput($tableName, $read, $write)->execute();
+        
+        $result2 = $command->describeTable($tableName)->execute();
+        $this->assertArraySubset([
+            'Table' => [
+                'ProvisionedThroughput' => [
+                    'ReadCapacityUnits' => $read,
+                    'WriteCapacityUnits' => $write,
+                ]
+            ]
+        ], $result2);
+    }
+    
+    /**
      * @group deleteTable
      */
     public function testDeleteTable()

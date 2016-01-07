@@ -7,10 +7,7 @@
 namespace UrbanIndo\Yii2\DynamoDb;
 
 use Aws\DynamoDb\DynamoDbClient;
-use Aws\DynamoDb\Marshaler;
-use Guzzle\Service\Resource\Model;
 use Yii;
-use yii\base\NotSupportedException;
 use yii\base\Object;
 
 /**
@@ -80,6 +77,18 @@ class Command extends Object
     public function createTable($table, array $options)
     {
         list($name, $argument) = $this->db->getQueryBuilder()->createTable($table, $options);
+        return $this->setCommand($name, $argument);
+    }
+    
+    /**
+     * Update table command.
+     * @param string $table   The name of the table.
+     * @param array  $options The options of the update.
+     * @see http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_UpdateTable.html
+     */
+    public function updateTable($table, array $options)
+    {
+        list($name, $argument) = $this->db->getQueryBuilder()->updateTable($table, $options);
         return $this->setCommand($name, $argument);
     }
     
@@ -211,5 +220,30 @@ class Command extends Object
     {
         list($name, $argument) = $this->db->getQueryBuilder()->batchGetItem($table, $keys, $options);
         return $this->setCommand($name, $argument);
+    }
+    
+    /**
+     * Update throughput of a table.
+     * 
+     * This is a shorthand for `updateTable` command for only updating the
+     * throughput.
+     * 
+     * Note, the readThroughput and writeThrougput have to be at least 1, and
+     * cannot be null.
+     * 
+     * @param string  $table           The name of the table.
+     * @param integer $readThroughput  The read throughput new size.
+     * @param integer $writeThroughput The write throguhput new size.
+     * @return static
+     * @throws \InvalidArgumentException When both throughput is empty.
+     */
+    public function updateThroughput($table, $readThroughput, $writeThroughput)
+    {   
+        return $this->updateTable($table, [
+            'ProvisionedThroughput' => [
+                'ReadCapacityUnits' => $readThroughput,
+                'WriteCapacityUnits' => $writeThroughput,
+            ]
+        ]);
     }
 }
