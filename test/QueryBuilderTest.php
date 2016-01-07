@@ -510,10 +510,10 @@ class QueryBuilderTest extends TestCase
         ];
 
         $this->assertEquals($expected, $qb->build($query1)[1]);
-        $expected['ScanIndexForward'] = false;
+        $expected['ScanIndexForward'] = true;
         $this->assertEquals($expected, $qb->build($query2)[1]);
         $this->assertEquals($expected, $qb->build($query3)[1]);
-        $expected['ScanIndexForward'] = true;
+        $expected['ScanIndexForward'] = false;
         $this->assertEquals($expected, $qb->build($query4)[1]);
     }
 
