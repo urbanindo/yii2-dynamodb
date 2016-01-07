@@ -25,15 +25,25 @@ class QueryBuilder extends Object
      * The prefix for automatically generated query binding parameters.
      */
     const PARAM_PREFIX = ':dqp';
+    
+    /**
+     * The prefix for attribute name.
+     */
+    const ATTRIBUTE_PREFIX = '#n';
 
     /**
-     * @var Connection the database connection.
+     * The database connection.
+     *
+     * @var Connection
      */
     public $db;
 
     /**
-     * @var array map of query condition to builder methods.
+     * Map of query condition to builder methods.
+     *
      * These methods are used by [[buildCondition]] to build SQL conditions from array syntax.
+     *
+     * @var array
      */
     protected $conditionBuilders = [
         'NOT' => 'buildNotCondition',
@@ -797,75 +807,204 @@ class QueryBuilder extends Object
     public function buildOptions(Query $query, $clear = true)
     {
         $options = [];
-
-        if (!empty($query->orderBy)) {
-            $sort = '';
-            if (is_array($query->orderBy)) {
-                if (ArrayHelper::isIndexed($query->orderBy)) {
-                    if (sizeof($query->orderBy) > 1) {
-                        $query->indexBy = $query->orderBy[0];
-                        $sort = $query->orderBy[1];
-                    } else {
-                        $sort = $query->orderBy[0];
-                    }
-                } else {
-                    $query->indexBy = key($query->orderBy);
-                    $sort = current($query->orderBy);
-                }
-            } else {
-                if (in_array(strtoupper($query->orderBy), ['ASC', 'DESC'])) {
-                    $sort = $query->orderBy;
-                } else {
-                    list($index, $sort) = explode(' ', $query->orderBy, 2);
-                    $query->indexBy = $index;
-                }
-            }
-            $sort = strtoupper($sort);
-            if (!in_array($sort, ['ASC', 'DESC'])) {
-                throw new InvalidArgumentException('Sort key unknown: ' . reset($query->orderBy));
-            }
-            $options['ScanIndexForward'] = ($sort != 'ASC');
-        }
-        if (!empty($query->indexBy)) {
-            if (is_callable($query->indexBy)) {
-                throw new InvalidArgumentException('Cannot using callable parameter.');
-            }
-            $options = array_merge($options, ['IndexName' => $query->indexBy]);
-            if ($clear) {
-                $query->indexBy = null;
-            }
-        }
-        if (!empty($query->limit)) {
-            $options = array_merge($options, ['Limit' => (int) $query->limit]);
-        }
-        if (!empty($query->offset)) {
-            if (!is_array($query->offset)) {
-                throw new InvalidArgumentException(
-                    'Missed associative array of keys mapping.'
-                );
-            }
-            $options = array_merge($options, ['ExclusiveStartKey' => $query->offset]);
-        }
-        if (!is_null($query->consistentRead)) {
-            if (!is_bool($query->consistentRead)) {
-                throw new InvalidArgumentException(
-                    'Unsupported consistent read value. Accept boolean type.'
-                );
-            }
-            $options['ConsistentRead'] = $query->consistentRead;
-        }
-        if (!empty($query->returnConsumedCapacity)) {
-            $query->returnConsumedCapacity = strtoupper($query->returnConsumedCapacity);
-            if (!in_array($query->returnConsumedCapacity, ['INDEXES', 'TOTAL', 'NONE'])) {
-                throw new InvalidArgumentException(
-                    'Unsupported return consumed capacity value:' .
-                    $query->returnConsumedCapacity
-                );
-            }
-            $options['ReturnConsumedCapacity'] = $query->returnConsumedCapacity;
-        }
+        
+        $this->buildOrderBy($query, $options);
+        $this->buildIndexBy($query, $options, $clear);
+        $this->buildLimit($query, $options);
+        $this->buildExclusiveStartKey($query, $options);
+        $this->buildConsistentRead($query, $options);
+        $this->buildReturnConsumedCapacity($query, $options);
+        $this->buildOptionsExpressionAttributeNames($query, $options);
+        $this->buildAdditionalArguments($query, $options);
 
         return array_merge($options, $this->buildProjection($query));
+    }
+    
+    /**
+     * Build the `IndexName` option.
+     * @param Query $query   The query to build.
+     * @param array $options The options for command that is being built.
+     * @param boolean $clear Index by should clear after usage, this param
+     * give programmer options to clear or not.
+     * @return void
+     * @throws InvalidArgumentException Where order index is unrecognized.
+     */
+    public function buildOrderBy(Query $query, array &$options = [])
+    {
+        if (empty($query->orderBy)) {
+            return;
+        }
+        $sort = '';
+        if (is_array($query->orderBy)) {
+            if (ArrayHelper::isIndexed($query->orderBy)) {
+                if (sizeof($query->orderBy) > 1) {
+                    $query->indexBy = $query->orderBy[0];
+                    $sort = $query->orderBy[1];
+                } else {
+                    $sort = $query->orderBy[0];
+                }
+            } else {
+                $query->indexBy = key($query->orderBy);
+                $sort = current($query->orderBy);
+            }
+        } else {
+            if (in_array(strtoupper($query->orderBy), ['ASC', 'DESC'])) {
+                $sort = $query->orderBy;
+            } else {
+                list($index, $sort) = explode(' ', $query->orderBy, 2);
+                $query->indexBy = $index;
+            }
+        }
+        $sort = strtoupper($sort);
+        if (!in_array($sort, ['ASC', 'DESC'])) {
+            throw new InvalidArgumentException('Sort key unknown: ' . reset($query->orderBy));
+        }
+        $options['ScanIndexForward'] = ($sort != 'ASC');
+    }
+    
+    /**
+     * Build the `IndexName` option.
+     * @param Query $query   The query to build.
+     * @param array $options The options for command that is being built.
+     * @param boolean $clear Index by should clear after usage, this param
+     * give programmer options to clear or not.
+     * @return void
+     * @throws InvalidArgumentException When the parameter is callable.
+     */
+    public function buildIndexBy(Query $query, array &$options = [], $clear = true)
+    {
+        
+        if (empty($query->indexBy)) {
+            return;
+        }
+        if (is_callable($query->indexBy)) {
+            throw new InvalidArgumentException('Cannot using callable parameter.');
+        }
+        $options = array_merge($options, ['IndexName' => $query->indexBy]);
+        if ($clear) {
+            $query->indexBy = null;
+        }
+    }
+    
+    /**
+     * Build the `Limit` option.
+     * @param Query $query   The query to build.
+     * @param array $options The options for command that is being built.
+     * @return void
+     */
+    public function buildLimit(Query $query, array &$options = [])
+    {
+        if (!empty($query->limit)) {
+            $options['Limit'] = (int) $query->limit;
+        }
+    }
+    
+    /**
+     * Build the `ExclusiveStartKey` option.
+     * @param Query $query   The query to build.
+     * @param array $options The options for command that is being built.
+     * @return void
+     * @throws InvalidArgumentException The keys has to be 
+     * associative array.
+     */
+    public function buildExclusiveStartKey(Query $query, array &$options = [])
+    {
+        if (empty($query->offset)) {
+            return;
+        }
+        if (!is_array($query->offset)) {
+            throw new InvalidArgumentException(
+                'Missed associative array of keys mapping.'
+            );
+        }
+        $options['ExclusiveStartKey'] = $query->offset;
+    }
+    
+    /**
+     * Build the `ConsistentRead` option.
+     * @param Query $query   The query to build.
+     * @param array $options The options for command that is being built.
+     * @return void
+     * @throws InvalidArgumentException Only accept boolean.
+     */
+    public function buildConsistentRead(Query $query, array &$options = [])
+    {
+        if (is_null($query->consistentRead)) {
+            return;
+        }
+        if (!is_bool($query->consistentRead)) {
+            throw new InvalidArgumentException(
+                'Unsupported consistent read value. Accept boolean type.'
+            );
+        }
+        $options['ConsistentRead'] = $query->consistentRead;
+    }
+    
+    /**
+     * Build the `ReturnConsumedCapacity` option.
+     * @param Query $query   The query to build.
+     * @param array $options The options for command that is being built.
+     * @return void
+     * @throws InvalidArgumentException Unrecognized consume capacity.
+     */
+    public function buildReturnConsumedCapacity(Query $query, array &$options = [])
+    {
+        if (empty($query->returnConsumedCapacity)) {
+            return;
+        }
+        $query->returnConsumedCapacity = strtoupper($query->returnConsumedCapacity);
+        if (!in_array($query->returnConsumedCapacity, ['INDEXES', 'TOTAL', 'NONE'])) {
+            throw new InvalidArgumentException(
+                'Unsupported return consumed capacity value:' .
+                $query->returnConsumedCapacity
+            );
+        }
+        $options['ReturnConsumedCapacity'] = $query->returnConsumedCapacity;
+    }
+    
+    /**
+     * Build the `ExpressionAttributeNames` option.
+     * @param Query $query   The query to build.
+     * @param array $options The options for command that is being built.
+     * @return void
+     */
+    public function buildOptionsExpressionAttributeNames(Query $query, array &$options = [])
+    {
+        if (!empty($query->expressionAttributeNames)) {
+            $options['ExpressionAttributeNames'] = $query->expressionAttributeNames;
+        }
+    }
+    
+    /**
+     * Attach the additional arguments.
+     * @param Query $query   The query to build.
+     * @param array $options The options for command that is being built.
+     * @return void
+     */
+    public function buildAdditionalArguments(Query $query, array &$options = [])
+    {
+        if (!empty($query->additionalArguments)) {
+            $options = array_merge($query->additionalArguments);
+        }
+    }
+    
+    /**
+     * Get subtitution for an attribute name.
+     * @param Query  $query     The query to build.
+     * @param string $attribute The name of the attribute.
+     * @return string The subtution name for the attribute.
+     */
+    public function putExpressionAttributeName(Query $query, $attribute)
+    {
+        $name = array_search($query->expressionAttributeNames, $attribute);
+        if ($name !== false) {
+            return $name;
+        }
+        $count = count($query->expressionAttributeNames);
+        $newName = self::ATTRIBUTE_PREFIX . ($count + 1);
+        $query->expressionAttributeNames[$newName] = $attribute;
+        
+        return $newName;
     }
 
     /**
