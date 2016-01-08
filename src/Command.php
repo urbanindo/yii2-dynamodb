@@ -20,13 +20,13 @@ class Command extends Object
      * @var Connection
      */
     public $db;
-    
+
     /**
      * The name of the DynamoDB request. For example `CreateTable`, `GetItem`.
      * @var string
      */
     public $name;
-    
+
     /**
      * The argument of the DynamoDB. This contains, for example `KeySchema`,
      * `AttributeDefinitions`, etc.
@@ -54,7 +54,7 @@ class Command extends Object
         /* @var $result \Guzzle\Service\Resource\Model */
         return $result->toArray();
     }
-    
+
     /**
      * Specifies the command and the argument to be requested to DynamoDB.
      * @param string $name     The command name.
@@ -79,7 +79,7 @@ class Command extends Object
         list($name, $argument) = $this->db->getQueryBuilder()->createTable($table, $options);
         return $this->setCommand($name, $argument);
     }
-    
+
     /**
      * Update table command.
      * @param string $table   The name of the table.
@@ -92,7 +92,7 @@ class Command extends Object
         list($name, $argument) = $this->db->getQueryBuilder()->updateTable($table, $options);
         return $this->setCommand($name, $argument);
     }
-    
+
     /**
      * Delete an existing table.
      * @param string $table The name of the table.
@@ -103,7 +103,7 @@ class Command extends Object
         list($name, $argument) = $this->db->getQueryBuilder()->deleteTable($table);
         return $this->setCommand($name, $argument);
     }
-    
+
     /**
      * Describe a table.
      * @param string $table The name of the table.
@@ -114,7 +114,7 @@ class Command extends Object
         list($name, $argument) = $this->db->getQueryBuilder()->describeTable($table);
         return $this->setCommand($name, $argument);
     }
-    
+
     /**
      * @param string $table The name of the table.
      * @return integer
@@ -139,7 +139,7 @@ class Command extends Object
             return false;
         }
     }
-    
+
     /**
      * Put a single item in the table.
      * @param string $table   The name of the table.
@@ -152,7 +152,7 @@ class Command extends Object
         list($name, $argument) = $this->db->getQueryBuilder()->putItem($table, $value, $options);
         return $this->setCommand($name, $argument);
     }
-    
+
     /**
      * Put multiple items in the table. This method can only put 25 object max.
      * @param string $table   The name of the table.
@@ -166,7 +166,7 @@ class Command extends Object
         list($name, $argument) = $this->db->getQueryBuilder()->batchPutItem($table, $values, $options);
         return $this->setCommand($name, $argument);
     }
-    
+
     /**
      * Put multiple items in the table with size > 25 object.
      * @param string $table   The name of the table.
@@ -186,7 +186,7 @@ class Command extends Object
             $batches
         );
     }
-    
+
     /**
      * Execute multiple command.
      * @param array $commands Commands to be executed.
@@ -202,7 +202,7 @@ class Command extends Object
             $commands
         );
     }
-    
+
     /**
      * Put multiple items in the table.
      * @param string $table   The name of the table.
@@ -217,7 +217,7 @@ class Command extends Object
         list($name, $argument) = $this->db->getQueryBuilder()->batchDeleteItem($table, $keys, $options);
         return $this->setCommand($name, $argument);
     }
-    
+
     /**
      * Get a single item from table.
      * @param string $table   The name of the table.
@@ -230,7 +230,7 @@ class Command extends Object
         list($name, $argument) = $this->db->getQueryBuilder()->getItem($table, $key, $options);
         return $this->setCommand($name, $argument);
     }
-    
+
     /**
      * Scan table.
      * @param string $table   The name of the table.
@@ -242,7 +242,7 @@ class Command extends Object
         list($name, $argument) = $this->db->getQueryBuilder()->scan($table, $options);
         return $this->setCommand($name, $argument);
     }
-    
+
     /**
      * Get multiple items from table using keys.
      *
@@ -259,7 +259,7 @@ class Command extends Object
         list($name, $argument) = $this->db->getQueryBuilder()->batchGetItem($table, $keys, $options);
         return $this->setCommand($name, $argument);
     }
-    
+
     /**
      * Update throughput of a table.
      *
@@ -283,5 +283,19 @@ class Command extends Object
                 'WriteCapacityUnits' => $writeThroughput,
             ]
         ]);
+    }
+
+    /**
+     * @param string $table   The name of the Table.
+     * @param array  $keys    The keys of the row.
+     * @param array  $updates The hash attribute => value will be updated.
+     * @param array  $options Additional options to the request argument.
+     * @return static
+     */
+    public function updateItem($table, array $keys, array $updates, array $options = [])
+    {
+        list($name, $query_argument) = $this->db->getQueryBuilder()
+            ->updateItem($table, $keys, $updates, $options);
+        return $this->setCommand($name, $query_argument);
     }
 }

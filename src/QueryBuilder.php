@@ -824,8 +824,6 @@ class QueryBuilder extends Object
      * Build the `IndexName` option.
      * @param Query $query   The query to build.
      * @param array $options The options for command that is being built.
-     * @param boolean $clear Index by should clear after usage, this param
-     * give programmer options to clear or not.
      * @return void
      * @throws InvalidArgumentException Where order index is unrecognized.
      */
@@ -864,9 +862,9 @@ class QueryBuilder extends Object
 
     /**
      * Build the `IndexName` option.
-     * @param Query $query   The query to build.
-     * @param array $options The options for command that is being built.
-     * @param boolean $clear Index by should clear after usage, this param
+     * @param Query   $query   The query to build.
+     * @param array   $options The options for command that is being built.
+     * @param boolean $clear   Index by should clear after usage, this param
      * give programmer options to clear or not.
      * @return void
      * @throws InvalidArgumentException When the parameter is callable.
@@ -1021,7 +1019,7 @@ class QueryBuilder extends Object
         $argument = array_merge(['TableName' => $table], $options);
         return [$name, $argument];
     }
-    
+
     /**
      * Builds a DynamoDB command to update table.
      *
@@ -1438,6 +1436,68 @@ class QueryBuilder extends Object
             ]
         ], $options);
 
+        return [$name, $argument];
+    }
+
+    /**
+     * Builds a DynamoDB command for batch delete item.
+     *
+     * @param string $table   The name of the table to be created.
+     * @param array  $keys    The keys of the row to get.
+     * This can be
+     * 1) indexed array of scalar value for table with single key,
+     *
+     * e.g. ['value1', 'value2', 'value3', 'value4']
+     *
+     * 2) indexed array of array of scalar value for table with multiple key,
+     *
+     * e.g. [
+     *  ['value11', 'value12'],
+     *  ['value21', 'value22'],
+     *  ['value31', 'value32'],
+     *  ['value41', 'value42'],
+     * ]
+     *
+     * The first scalar will be the primary (or hash) key, the second will be the
+     * secondary (or range) key.
+     *
+     * 3) indexed array of associative array
+     *
+     * e.g. [
+     *  ['attribute1' => 'value11', 'attribute2' => 'value12'],
+     *  ['attribute1' => 'value21', 'attribute2' => 'value22'],
+     *  ['attribute1' => 'value31', 'attribute2' => 'value32'],
+     *  ['attribute1' => 'value41', 'attribute2' => 'value42'],
+     * ]
+     *
+     * 4) or associative of scalar values.
+     *
+     * e.g. [
+     *  'attribute1' => ['value11', 'value21', 'value31', 'value41']
+     *  'attribute2' => ['value12', 'value22', 'value32', 'value42']
+     * ].
+     *
+     * @param array  $updates Update hash key-value of the model.
+     * @param array  $options Additional options for the final argument.
+     * @return array
+     */
+    public function updateItem($table, array $keys, array $updates, array $options = [])
+    {
+        $name = 'UpdateItem';
+        $argument['TableName'] = $table;
+        if (ArrayHelper::isIndexed($keys)) {
+            $argument['Key'] = $this->buildBatchKeyArgument($table, $keys);
+        } else {
+            $argument['Key'] = $this->paramToExpressionAttributeValues($keys);
+        }
+        $value_map = $this->paramToExpressionAttributeValues($updates);
+        foreach ($value_map as $key => $value) {
+            $argument['AttributeUpdates'][$key] = [
+                'Value' => $value,
+                'Action' => 'PUT',
+            ];
+        }
+        $argument = array_merge($argument, $options);
         return [$name, $argument];
     }
 }
