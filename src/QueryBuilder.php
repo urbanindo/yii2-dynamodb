@@ -89,11 +89,12 @@ class QueryBuilder extends Object
             $keyCondition = $this->isConditionMatchKeySchema($query);
             $supportBatchGetItem = $this->isOperatorSupportBatchGetItem($query->where);
             if (empty($query->where) || !empty($query->indexBy) || !empty($query->limit)
-                    || !empty($query->offset) || !empty($query->orderBy)
-                    || $keyCondition != 1 || !$supportBatchGetItem) {
+                        || !empty($query->offset) || !empty($query->orderBy)
+                        || $keyCondition != 1 || !$supportBatchGetItem) {
                 // WARNING AWS SDK not support operator beside '=' if use Query method
                 // TODO Slice where clause query
-                if (!empty($query->orderBy) && ($keyCondition == 1) && $supportBatchGetItem) {
+                if (!empty($query->orderBy) && ($keyCondition == 1 || $keyCondition == 2)
+                        && $supportBatchGetItem) {
                     $query->using = Query::USING_QUERY;
                 } else {
                     $query->using = Query::USING_SCAN;
@@ -184,7 +185,8 @@ class QueryBuilder extends Object
      * To check conditoin which contain any key.
      * @param Query $query Object from which the query will be generated.
      * @return integer Return 0 if no match with key, 1 if match only key,
-     * 2 if contain both key and non key.
+     * 2 if not found all keys but no have non key attribute, 3 if found both
+     * key and not key.
      */
     public function isConditionMatchKeySchema(Query $query)
     {
@@ -219,15 +221,17 @@ class QueryBuilder extends Object
                     continue;
                 }
                 if (ArrayHelper::isIndexed($whereElement)) {
-                    $this->searchAttrInArray($whereElement, $keySchema, $allKeyTrue);
+                    if ($this->searchAttrInArray($whereElement, $keySchema, $allKeyTrue) == 3) {
+                        return 3;
+                    }
                 } else { // inner element is associative
                     foreach ($whereElement as $attr => $val) {
                         if (is_array($val)) {
                             $this->searchAttrInArray($val, $keySchema, $allKeyTrue);
                         }
                         if (!in_array($attr, $keySchema)) {
-                            if (in_array(true, $allKeyTrue)) {
-                                return 2;
+                            if (in_array(1, $allKeyTrue)) {
+                                return 3;
                             }
                         } else {
                             $allKeyTrue[$attr] = 1;
@@ -235,10 +239,12 @@ class QueryBuilder extends Object
                     }
                 }
             } else { // associative
-                $this->searchAttrInArray($whereElement, $keySchema, $allKeyTrue);
+                if ($this->searchAttrInArray($whereElement, $keySchema, $allKeyTrue) == 3) {
+                    return 3;
+                }
                 if (!in_array($key, $keySchema)) {
-                    if (in_array(true, $allKeyTrue)) {
-                        return 2;
+                    if (in_array(1, $allKeyTrue)) {
+                        return 3;
                     }
                 } else {
                     $allKeyTrue[$key] = 1;
