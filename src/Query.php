@@ -351,7 +351,9 @@ class Query extends Component implements QueryInterface
      */
     public function one($db = null)
     {
-        $this->limit(1);
+        if (!in_array($this->using, [self::USING_SCAN, self::USING_QUERY, self::USING_AUTO])) {
+            $this->limit(1);
+        }
         $response = $this->execute($db);
         $rows = $this->getItemsFromResponse($response);
         if (empty($rows)) {
