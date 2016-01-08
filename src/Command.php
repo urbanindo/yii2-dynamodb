@@ -294,8 +294,21 @@ class Command extends Object
      */
     public function updateItem($table, array $keys, array $updates, array $options = [])
     {
+        return $this->updateItemSelectedAction($table, $keys, $updates, 'PUT', $options);
+    }
+
+    /**
+     * @param string $table   The name of the Table.
+     * @param array  $keys    The keys of the row.
+     * @param array  $updates The hash attribute => value will be updated.
+     * @param string $action  Action of the method, either 'PUT'|'ADD'|'DELETE'.
+     * @param array  $options Additional options to the request argument.
+     * @return static
+     */
+    public function updateItemSelectedAction($table, array $keys, array $updates, $action, array $options = [])
+    {
         list($name, $query_argument) = $this->db->getQueryBuilder()
-            ->updateItem($table, $keys, $updates, $options);
+            ->updateItemSelectedAction($table, $keys, $updates, $action, $options);
         return $this->setCommand($name, $query_argument);
     }
 }

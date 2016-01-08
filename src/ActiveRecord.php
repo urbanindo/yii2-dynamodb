@@ -270,12 +270,17 @@ class ActiveRecord extends BaseActiveRecord
      * @param array        $counters  The counters to be updated (attribute name => increment value).
      * Use negative values if you want to decrement the counters.
      * @param string|array $condition The conditions to select the rows to be updated.
-     * @return void
+     * @return static
      * @throws \yii\base\NotSupportedException Not implemented yet.
      */
     public static function updateAllCounters($counters, $condition = '')
     {
-        throw new \yii\base\NotSupportedException(__METHOD__ . ' is not supported.');
+        return self::getDb()->createCommand()->updateItem(
+            static::tableName(),
+            $condition,
+            $counters,
+            'ADD'
+        )->execute();
     }
 
     /**

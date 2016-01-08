@@ -1489,6 +1489,54 @@ class QueryBuilder extends Object
      */
     public function updateItem($table, array $keys, array $updates, array $options = [])
     {
+        return updateItemSelectedAction($table, $keys, $updates, 'PUT', $options);
+    }
+
+    /**
+     * Builds a DynamoDB command for batch delete item.
+     *
+     * @param string $table   The name of the table to be created.
+     * @param array  $keys    The keys of the row to get.
+     * This can be
+     * 1) indexed array of scalar value for table with single key,
+     *
+     * e.g. ['value1', 'value2', 'value3', 'value4']
+     *
+     * 2) indexed array of array of scalar value for table with multiple key,
+     *
+     * e.g. [
+     *  ['value11', 'value12'],
+     *  ['value21', 'value22'],
+     *  ['value31', 'value32'],
+     *  ['value41', 'value42'],
+     * ]
+     *
+     * The first scalar will be the primary (or hash) key, the second will be the
+     * secondary (or range) key.
+     *
+     * 3) indexed array of associative array
+     *
+     * e.g. [
+     *  ['attribute1' => 'value11', 'attribute2' => 'value12'],
+     *  ['attribute1' => 'value21', 'attribute2' => 'value22'],
+     *  ['attribute1' => 'value31', 'attribute2' => 'value32'],
+     *  ['attribute1' => 'value41', 'attribute2' => 'value42'],
+     * ]
+     *
+     * 4) or associative of scalar values.
+     *
+     * e.g. [
+     *  'attribute1' => ['value11', 'value21', 'value31', 'value41']
+     *  'attribute2' => ['value12', 'value22', 'value32', 'value42']
+     * ].
+     *
+     * @param array  $updates Update hash key-value of the model.
+     * @param string $action  Action of the method, either 'PUT'|'ADD'|'DELETE'.
+     * @param array  $options Additional options for the final argument.
+     * @return array
+     */
+    public function updateItemSelectedAction($table, array $keys, array $updates, $action, array $options = [])
+    {
         $name = 'UpdateItem';
         $argument['TableName'] = $table;
         if (ArrayHelper::isIndexed($keys)) {
@@ -1500,7 +1548,7 @@ class QueryBuilder extends Object
         foreach ($value_map as $key => $value) {
             $argument['AttributeUpdates'][$key] = [
                 'Value' => $value,
-                'Action' => 'PUT',
+                'Action' => $action,
             ];
         }
         $argument = array_merge($argument, $options);
