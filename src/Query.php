@@ -94,7 +94,7 @@ class Query extends Component implements QueryInterface
     public $from;
 
     /**
-     * Whether to store response data in the data returned. 
+     * Whether to store response data in the data returned.
      *
      * This can be either boolean, false if not to store response data or the
      * key of the response to store.
@@ -102,14 +102,14 @@ class Query extends Component implements QueryInterface
      * @var array|boolean
      */
     public $storeResponseData = ['ConsumedCapacity', 'LastEvaluatedKey', 'ScannedCount', 'Count'];
-    
+
     /**
      * Store the expression attribute names.
      *
      * @var array
      */
     public $expressionAttributeNames = [];
-    
+
     /**
      * Provides an easy way to put additional arguments.
      * @var array
@@ -214,13 +214,14 @@ class Query extends Component implements QueryInterface
         $this->consistentRead = false;
         return $this;
     }
-    
+
     /**
      * Additional arguments.
      * @param array $arguments Additional arguments.
      * @return static
      */
-    public function withAdditionalArguments(array $arguments) {
+    public function withAdditionalArguments(array $arguments)
+    {
         $this->additionalArguments = $arguments;
         return $this;
     }
@@ -388,4 +389,3 @@ class Query extends Component implements QueryInterface
         throw new NotSupportedException('Count operation is not suppported.');
     }
 }
-

@@ -98,9 +98,10 @@ class ActiveRecord extends BaseActiveRecord
      */
     public static function find($options = [])
     {
-        return Yii::createObject(ActiveQuery::className(), 
-            [get_called_class(), $options]
-        );
+        return Yii::createObject(ActiveQuery::className(), [
+            get_called_class(),
+            $options
+        ]);
     }
 
     /**
@@ -247,12 +248,15 @@ class ActiveRecord extends BaseActiveRecord
      *
      * @param array        $attributes Attribute values (name-value pairs) to be saved into the table.
      * @param string|array $condition  The conditions of the rows.
-     * @return void
-     * @throws \yii\base\NotSupportedException Not implemented yet.
+     * @return static
      */
     public static function updateAll($attributes, $condition = '')
     {
-        throw new \yii\base\NotSupportedException(__METHOD__ . ' is not supported.');
+        return self::getDb()->createCommand()->updateItem(
+            static::tableName(),
+            $condition,
+            $attributes
+        )->execute();
     }
 
     /**
@@ -266,12 +270,17 @@ class ActiveRecord extends BaseActiveRecord
      * @param array        $counters  The counters to be updated (attribute name => increment value).
      * Use negative values if you want to decrement the counters.
      * @param string|array $condition The conditions to select the rows to be updated.
-     * @return void
+     * @return static
      * @throws \yii\base\NotSupportedException Not implemented yet.
      */
     public static function updateAllCounters($counters, $condition = '')
     {
-        throw new \yii\base\NotSupportedException(__METHOD__ . ' is not supported.');
+        return self::getDb()->createCommand()->updateItem(
+            static::tableName(),
+            $condition,
+            $counters,
+            'ADD'
+        )->execute();
     }
 
     /**

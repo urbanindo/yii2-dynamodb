@@ -44,6 +44,40 @@ class ActiveRecordTest extends TestCase {
         $this->assertEquals($objectToInsert->kids, $objectFromFind->kids);
     }
 
+    public function testInsertAndSaveOnRecord()
+    {
+        $objectToInsert = new \test\data\Customer();
+        $id = (int) \Faker\Provider\Base::randomNumber(5);
+        $faker = \Faker\Factory::create();
+        $objectToInsert->id = $id;
+        $objectToInsert->name = $faker->name;
+        $objectToInsert->contacts = [
+            'telephone1' => 123456,
+            'telephone2' => 345678,
+            'telephone3' => 345678,
+        ];
+        $objectToInsert->prices = [
+            1000000,
+            1000000,
+            1000000,
+            1000000
+        ];
+        $objectToInsert->kids = [
+            'Alice',
+            'Billy',
+            'Charlie',
+        ];
+
+        $this->assertTrue($objectToInsert->save(false));
+        $objectFromFind = \test\data\Customer::findOne(['id' => $id]);
+
+        $toname = $faker->firstNameMale;
+        $objectFromFind->name = $toname;
+        $objectFromFind->save();
+        $objectFromFind = \test\data\Customer::findOne(['id' => $id]);
+        $this->assertEquals($objectFromFind->name, $toname);
+    }
+
     public function testCondition()
     {
         $objectToInsert = new \test\data\Customer();
