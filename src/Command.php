@@ -85,6 +85,7 @@ class Command extends Object
      * @param string $table   The name of the table.
      * @param array  $options The options of the update.
      * @see http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_UpdateTable.html
+     * @return static
      */
     public function updateTable($table, array $options)
     {
@@ -153,7 +154,7 @@ class Command extends Object
     }
     
     /**
-     * Put multiple items in the table.
+     * Put multiple items in the table. This method can only put 25 object max.
      * @param string $table   The name of the table.
      * @param array  $values  The values to input.
      * @param array  $options Additional options to the request argument.
@@ -161,8 +162,45 @@ class Command extends Object
      */
     public function batchPutItem($table, array $values, array $options = [])
     {
+        assert(count($values <= 25));
         list($name, $argument) = $this->db->getQueryBuilder()->batchPutItem($table, $values, $options);
         return $this->setCommand($name, $argument);
+    }
+    
+    /**
+     * Put multiple items in the table with size > 25 object.
+     * @param string $table   The name of the table.
+     * @param array  $values  The values to input.
+     * @param array  $options Additional options to the request argument.
+     * @return static[]
+     */
+    public function batchPutAllItems($table, array $values, array $options = [])
+    {
+        $batches = array_chunk($values, 25);
+        return array_map(
+            function ($batch) use ($table, $options) {
+                $command = clone $this;
+                $command->batchPutItem($table, $batch, $options);
+                return $command;
+            },
+            $batches
+        );
+    }
+    
+    /**
+     * Execute multiple command.
+     * @param array $commands Commands to be executed.
+     * @return array The array result of the command execution.
+     */
+    public static function batchExecute(array $commands)
+    {
+        /* @var $commands static[] */
+        return array_map(
+            function ($command) {
+                return $command->execute();
+            },
+            $commands
+        );
     }
     
     /**
@@ -224,13 +262,13 @@ class Command extends Object
     
     /**
      * Update throughput of a table.
-     * 
+     *
      * This is a shorthand for `updateTable` command for only updating the
      * throughput.
-     * 
+     *
      * Note, the readThroughput and writeThrougput have to be at least 1, and
      * cannot be null.
-     * 
+     *
      * @param string  $table           The name of the table.
      * @param integer $readThroughput  The read throughput new size.
      * @param integer $writeThroughput The write throguhput new size.
@@ -238,7 +276,7 @@ class Command extends Object
      * @throws \InvalidArgumentException When both throughput is empty.
      */
     public function updateThroughput($table, $readThroughput, $writeThroughput)
-    {   
+    {
         return $this->updateTable($table, [
             'ProvisionedThroughput' => [
                 'ReadCapacityUnits' => $readThroughput,

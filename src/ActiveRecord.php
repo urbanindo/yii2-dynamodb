@@ -190,12 +190,29 @@ class ActiveRecord extends BaseActiveRecord
 
     /**
      * Batch insert values into the table.
-     * @param array $values The values to be inserted.
+     * @param array $values  The values to be inserted.
+     * @param array $options Additional attribute for the query class.
      * @return mixed
      */
-    public static function batchInsert($values)
+    public static function batchInsert($values, $options = [])
     {
-        return self::getDb()->createCommand()->putItems(static::tableName(), $values);
+        $inserts = array_map(
+            function ($model) {
+                if ($model instanceof ActiveRecord) {
+                    return $model->getAttributes();
+                } else if (is_array($model)) {
+                    return $model;
+                }
+            },
+            $values
+        );
+        return Command::batchExecute(
+            self::getDb()->createCommand()->batchPutAllItems(
+                static::tableName(),
+                $inserts,
+                $options
+            )
+        );
     }
 
     /**
