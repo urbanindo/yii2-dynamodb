@@ -258,8 +258,7 @@ class Query extends Component implements QueryInterface
                 return Marshaler::unmarshalItem($item);
             }, $response['Responses'][$this->from]);
         } else if ($this->using == self::USING_GET_ITEM) {
-            $row = Marshaler::unmarshalItem($response['Item']);
-            $rows = [$row];
+            $rows = isset($response['Item']) ? [Marshaler::unmarshalItem($response['Item'])] : [];
         }
 
         $storedResponse = self::extractStoredResponseData($this->storeResponseData, $response);
