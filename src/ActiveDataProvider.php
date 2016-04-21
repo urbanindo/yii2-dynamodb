@@ -39,13 +39,13 @@ class ActiveDataProvider extends \yii\data\BaseDataProvider
      * if it is not explicitly set.
      */
     public $query;
-    
+
     /**
      * @var Connection|array|string the DB connection object or the application component ID of the DB connection.
      * If not set, the default DB connection will be used.
      */
     public $db = 'dynamodb';
-    
+
     /**
      * @var string|callable the column that is used as the key of the data models.
      * This can be either a column name, or a callable that returns the key value of a given data model.
@@ -59,7 +59,7 @@ class ActiveDataProvider extends \yii\data\BaseDataProvider
      * @see getKeys()
      */
     public $key;
-    
+
     /**
      * Initializes the DB connection component.
      * This method will initialize the [[db]] property to make sure it refers to a valid DB connection.
@@ -130,19 +130,22 @@ class ActiveDataProvider extends \yii\data\BaseDataProvider
             throw new InvalidConfigException('The "query" property must be an instance of a class that '.
                                              'implements the UrbanIndo\Yii2\DynamoDb\Query or its subclasses.');
         }
-        
+
         $query = clone $this->query;
         if (($pagination = $this->getPagination()) !== false) {
             $query->limit($pagination->getLimit());
             $query->offset($pagination->getOffset());
         }
-        
+
         $models = $query->all($this->db);
         if ($pagination !== false) {
             $peek = current(array_slice($models, -1));
-            /* @var $peek ActiveRecord */
-            $nextLastKey = ArrayHelper::getValue($peek->getResponseData(), 'LastEvaluatedKey');
-            $pagination->setNextLastKey($nextLastKey);
+            
+            if ($peek != null) {
+                /* @var $peek ActiveRecord */
+                $nextLastKey = ArrayHelper::getValue($peek->getResponseData(), 'LastEvaluatedKey');
+                $pagination->setNextLastKey($nextLastKey);
+            }
         }
         return $models;
     }
@@ -155,7 +158,7 @@ class ActiveDataProvider extends \yii\data\BaseDataProvider
     {
         return 0;
     }
-    
+
     /**
      * Returns the pagination object used by this data provider.
      * Note that you should call [[prepare()]] or [[getModels()]] first to get correct values
@@ -166,7 +169,7 @@ class ActiveDataProvider extends \yii\data\BaseDataProvider
     {
         return parent::getPagination();
     }
-    
+
     /**
      * Sets the pagination for this data provider.
      * @param array|Pagination|boolean $value The pagination to be used by this data provider.
