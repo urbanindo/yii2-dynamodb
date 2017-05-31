@@ -135,9 +135,12 @@ class Command extends Object
         try {
             $this->describeTable($table)->execute();
             return true;
-        } catch (\Aws\DynamoDb\Exception\ResourceNotFoundException $exc) {
-            return false;
+        } catch (\Aws\DynamoDb\Exception\DynamoDbException $exc) {
+            if (strpos($exc->getMessage(), 'ResourceNotFoundException') === false) {
+                throw $exc;
+            }
         }
+        return false;
     }
 
     /**

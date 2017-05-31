@@ -67,7 +67,7 @@ abstract class TestCase extends \PHPUnit_Framework_TestCase
             'ProvisionedThroughput' => [
                 'ReadCapacityUnits' => 5,
                 'WriteCapacityUnits' => 5,
-            ]
+            ],
         ])->execute();
 
         return [$tableName, $fieldName1];
@@ -105,7 +105,7 @@ abstract class TestCase extends \PHPUnit_Framework_TestCase
             'ProvisionedThroughput' => [
                 'ReadCapacityUnits' => 5,
                 'WriteCapacityUnits' => 5,
-            ]
+            ],
         ])->execute();
 
         return [$tableName, $fieldName1, $fieldName2];
@@ -160,7 +160,7 @@ abstract class TestCase extends \PHPUnit_Framework_TestCase
             'ProvisionedThroughput' => [
                 'ReadCapacityUnits' => 10,
                 'WriteCapacityUnits' => 10
-            ]
+            ],
         ])->execute();
     }
 
@@ -219,7 +219,7 @@ abstract class TestCase extends \PHPUnit_Framework_TestCase
             'ProvisionedThroughput' => [
                 'ReadCapacityUnits' => 10,
                 'WriteCapacityUnits' => 10
-            ]
+            ],
         ])->execute();
     }
 }
