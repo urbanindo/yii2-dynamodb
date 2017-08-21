@@ -292,12 +292,13 @@ class Command extends Object
      * @param string $table   The name of the Table.
      * @param array  $keys    The keys of the row.
      * @param array  $updates The hash attribute => value will be updated.
+     * @param string  $action $action  Action of the method, either 'PUT'|'ADD'|'DELETE'.
      * @param array  $options Additional options to the request argument.
      * @return static
      */
-    public function updateItem($table, array $keys, array $updates, array $options = [])
+    public function updateItem($table, array $keys, array $updates, $action = 'PUT', array $options = [])
     {
-        return $this->updateItemSelectedAction($table, $keys, $updates, 'PUT', $options);
+        return $this->updateItemSelectedAction($table, $keys, $updates, $action, $options);
     }
 
     /**
