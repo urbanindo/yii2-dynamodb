@@ -6,8 +6,8 @@
 
 namespace UrbanIndo\Yii2\DynamoDb;
 
-use Aws\DynamoDb\DynamoDbClient;
 use Yii;
+use Aws\DynamoDb\DynamoDbClient;
 
 /**
  * @author Petra Barus <petra.barus@gmail.com>
