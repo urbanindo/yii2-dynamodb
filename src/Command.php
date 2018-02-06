@@ -8,12 +8,11 @@ namespace UrbanIndo\Yii2\DynamoDb;
 
 use Aws\DynamoDb\DynamoDbClient;
 use Yii;
-use yii\base\Object;
 
 /**
  * @author Petra Barus <petra.barus@gmail.com>
  */
-class Command extends Object
+class Command extends \yii\base\BaseObject
 {
 
     /**
