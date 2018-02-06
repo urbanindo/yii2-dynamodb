@@ -7,7 +7,6 @@
 
 namespace UrbanIndo\Yii2\DynamoDb;
 
-use yii\base\Object;
 use yii\helpers\ArrayHelper;
 use yii\base\InvalidParamException;
 use InvalidArgumentException;
@@ -19,7 +18,7 @@ use Exception;
  *
  * @author Petra Barus <petra.barus@gmail.com>
  */
-class QueryBuilder extends Object
+class QueryBuilder extends \yii\base\BaseObject
 {
     /**
      * The prefix for automatically generated query binding parameters.

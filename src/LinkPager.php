@@ -9,7 +9,7 @@ namespace UrbanIndo\Yii2\DynamoDb;
 use yii\base\InvalidConfigException;
 use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
-use \yii\web\Link;
+use yii\web\Link;
 
 /**
  * LinkPager extends \yii\widgets\LinkPager to displays a list of hyperlinks for
