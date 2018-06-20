@@ -664,7 +664,7 @@ class QueryBuilder extends BaseObject
             throw new Exception("Operator '$operator' requires two operands.");
         }
         list($column, $values) = $operands;
-        if ($values === [] || $column === []) {
+        if ($values === [] ||  $column === []) {
             return $operator === 'IN' ? '0=1' : '';
         }
         $values = (array) $values;

@@ -165,7 +165,7 @@ class Command extends BaseObject
      */
     public function batchPutItem($table, array $values, array $options = [])
     {
-        assert(count($values <= 25));
+        //assert(count($values <= 25));
         list($name, $argument) = $this->db->getQueryBuilder()->batchPutItem($table, $values, $options);
         return $this->setCommand($name, $argument);
     }
