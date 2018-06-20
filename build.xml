@@ -1,70 +1,14 @@
 <project name="yii2-dynamodb" default="test" basedir=".">
-    <taskdef resource="net/sf/antcontrib/antcontrib.properties" classpath="dynamodb/ant-contrib.jar" />
-    <property name="dynamodbpath" location="${basedir}/dynamodb/DynamoDBLocal.jar"/>
-    <target name="run-test">
-        <exec executable="${basedir}/vendor/bin/phpunit" failonerror="true">
-        </exec>
-    </target>
     <target name="start-server">
-        <echo>Starting server</echo>
-        <exec executable="java" spawn="true">
-            <arg value="-Djava.library.path=${basedir}/dynamodb/DynamoDBLocal_Lib"/>
-            <arg value="-jar"/>
-            <arg value="${dynamodbpath}"/>
-            <arg value="-inMemory"/>
-            <arg value="-sharedDb"/>
-            <arg value="--port" />
-            <arg value="2700" />
-        </exec>
-        <sleep seconds="3"/>
+        <exec command="./test/start_server.sh"/>
     </target>
-    <target name="stop-server">
-        <exec executable="jps">
-            <arg value="-l"/>
-            <redirector outputproperty="dynamodb.pid">
-                <outputfilterchain>
-                    <linecontains>
-                        <contains value="DynamoDBLocal.jar"/>
-                    </linecontains>
-                    <replaceregex pattern=" ${dynamodbpath}" replace="" />
-                </outputfilterchain>
-            </redirector>
-        </exec>
-        <echo>Cleaning up</echo>
-        <exec executable="kill">
-            <arg value="-9"/>
-            <arg value="${dynamodb.pid}"/>
-        </exec>
-    </target>
-    <target name="test">
-        <antcall target="start-server"></antcall>
-        <echo>Running phpunit</echo>
-        <trycatch>
-            <try>
-                <antcall target="run-test">
-                </antcall>
-            </try>
-
-            <finally>
-                <antcall target="stop-server">
-                </antcall>
-            </finally>
-        </trycatch>
+    <target name="test" depends="start-server">
+        <exec command="./vendor/bin/phpunit" passthru="true" checkreturn="true"/>
     </target>
     <target name="phpcs">
-        <exec executable="${basedir}/vendor/bin/phpcs" failonerror="true">
-            <arg value="--standard=${basedir}/ruleset.xml"/>
+        <exec executable="./vendor/bin/phpcs">
+            <arg value="--standard=./ruleset.xml"/>
             <arg value="src"/>
         </exec>
-    </target>
-    <target name="prepare">
-        <mkdir dir="${basedir}/dynamodb"/>
-        <get dest="dynamodb/ant-contrib.jar" >
-            <url url="http://central.maven.org/maven2/ant-contrib/ant-contrib/1.0b3/ant-contrib-1.0b3.jar" />
-        </get>
-        <get dest="${basedir}/dynamodb/dynamodb.zip">
-          <url url="http://s3-ap-southeast-1.amazonaws.com/dynamodb-local-singapore/dynamodb_local_latest.zip"/>
-        </get>
-        <unzip src="${basedir}/dynamodb/dynamodb.zip" dest="${basedir}/dynamodb/"/>
     </target>
 </project>

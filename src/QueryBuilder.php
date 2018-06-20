@@ -7,10 +7,9 @@
 
 namespace UrbanIndo\Yii2\DynamoDb;
 
-use yii\base\Object;
+use yii\base\BaseObject;
 use yii\helpers\ArrayHelper;
-use yii\base\InvalidParamException;
-use InvalidArgumentException;
+use yii\base\InvalidArgumentException;
 use Exception;
 
 /**
@@ -19,7 +18,7 @@ use Exception;
  *
  * @author Petra Barus <petra.barus@gmail.com>
  */
-class QueryBuilder extends Object
+class QueryBuilder extends BaseObject
 {
     /**
      * The prefix for automatically generated query binding parameters.
@@ -403,7 +402,7 @@ class QueryBuilder extends Object
      * Generate $key parameter associate with query method.
      * @param Query $query Object from which the parameter will be generated.
      * @return array Array of parameter
-     * @throws InvalidParamException Param query has to comply.
+     * @throws InvalidArgumentException Param query has to comply.
      */
     public function buildWhereGetItem(Query $query)
     {
@@ -422,14 +421,14 @@ class QueryBuilder extends Object
             if (is_string($value) || is_numeric($value)) {
                 if (ArrayHelper::isIndexed($query->where)) {
                     if ($query->where[0] != '=' && $query->where[0] != 'IN') {
-                        throw new InvalidParamException($query->using .
+                        throw new InvalidArgumentException($query->using .
                             " not support operator '" . $query->where[0] . "'.");
                     }
                     if (sizeof($query->where) == 2) {
                         $newWhere[$query->where[0]] = $query->where[1];
                         break;
                     } elseif (sizeof($query->where) != 3) {
-                        throw new InvalidParamException('The WHERE element require 2 or 3 elements.');
+                        throw new InvalidArgumentException('The WHERE element require 2 or 3 elements.');
                     }
 
                     if (is_array($query->where[2])) {
@@ -607,12 +606,12 @@ class QueryBuilder extends Object
      * @param array  $operands The SQL expressions to connect.
      * @param array  $params   The binding parameters to be populated.
      * @return string The generated SQL expression
-     * @throws InvalidParamException If wrong number of operands have been given.
+     * @throws InvalidArgumentException If wrong number of operands have been given.
      */
     public function buildNotCondition($operator, $operands, &$params)
     {
         if (count($operands) !== 1) {
-            throw new InvalidParamException("Operator '$operator' requires exactly one operand.");
+            throw new InvalidArgumentException("Operator '$operator' requires exactly one operand.");
         }
         $operand = reset($operands);
         if (is_array($operand)) {
@@ -631,12 +630,12 @@ class QueryBuilder extends Object
      * third operands describe the interval that column value should be in.
      * @param array  $params   The binding parameters to be populated.
      * @return string The generated SQL expression.
-     * @throws InvalidParamException If wrong number of operands have been given.
+     * @throws InvalidArgumentException If wrong number of operands have been given.
      */
     public function buildBetweenCondition($operator, $operands, &$params)
     {
         if (!isset($operands[0], $operands[1], $operands[2])) {
-            throw new InvalidParamException("Operator '$operator' requires three operands.");
+            throw new InvalidArgumentException("Operator '$operator' requires three operands.");
         }
         list($column, $value1, $value2) = $operands;
         $phName1 = self::PARAM_PREFIX . count($params);
@@ -735,12 +734,12 @@ class QueryBuilder extends Object
      * @param array  $operands Contains two column names.
      * @param array  $params   The binding parameters to be populated.
      * @return string The generated filter expression.
-     * @throws InvalidParamException If wrong number of operands have been given.
+     * @throws InvalidArgumentException If wrong number of operands have been given.
      */
     public function buildFunctionCondition($func, $operands, &$params)
     {
         if (count($operands) !== 1) {
-            throw new InvalidParamException("Function '$func' requires exactly one operand.");
+            throw new InvalidArgumentException("Function '$func' requires exactly one operand.");
         }
         $operand = reset($operands);
         if (is_array($operand)) {
@@ -763,12 +762,12 @@ class QueryBuilder extends Object
      * @param array  $operands Contains two column names.
      * @param array  $params   The binding parameters to be populated.
      * @return string The generated SQL expression.
-     * @throws InvalidParamException If wrong number of operands have been given.
+     * @throws InvalidArgumentException If wrong number of operands have been given.
      */
     public function buildFunctionCondition2Param($func, $operands, &$params)
     {
         if (count($operands) !== 2) {
-            throw new InvalidParamException("Function '$func' requires exactly two operands.");
+            throw new InvalidArgumentException("Function '$func' requires exactly two operands.");
         }
         $phName1 = $operands[0];
         $phName2 = self::PARAM_PREFIX . count($params);
@@ -783,13 +782,13 @@ class QueryBuilder extends Object
      * @param array  $operands Contains two column names.
      * @param array  $params   The binding parameters to be populated.
      * @return string the generated filter expression.
-     * @throws InvalidParamException If wrong number of operands have been given.
+     * @throws InvalidArgumentException If wrong number of operands have been given.
      * @throws Exception No NULL value in DynamoDB.
      */
     public function buildSimpleCondition($operator, $operands, &$params)
     {
         if (count($operands) !== 2) {
-            throw new InvalidParamException("Operator '$operator' requires two operands.");
+            throw new InvalidArgumentException("Operator '$operator' requires two operands.");
         }
         list($column, $value) = $operands;
         if ($value === null) {
