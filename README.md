@@ -11,8 +11,8 @@ This is a DynamoDB extension for Yii2
 ## Requirement
 
 This extension requires
-- PHP minimum 5.4
-- Yii2 minimum 2.0.9 and lesser than 2.1
+- PHP minimum 7.0 and before 7.2 (Upgrade is still underwork)
+- Yii2 minimum 2.0.13 and lesser than 2.1
 - AWS PHP SDK 3.28
 
 ## Installation
