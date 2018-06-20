@@ -16,9 +16,8 @@
     },
     "require-dev": {
         "phing/phing": "2.16.1",
-        "phpunit/phpunit": "4.6.*",
-        "phpunit/dbunit": ">=1.2",
-        "phpunit/php-code-coverage": "2.2.4",
+        "phpunit/phpunit": "6.5.*",
+        "phpunit/php-code-coverage": "^5.3",
         "fzaninotto/faker": "dev-master",
         "flow/jsonpath": "dev-master",
         "yiisoft/yii2-coding-standards": "*",
