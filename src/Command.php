@@ -8,12 +8,12 @@ namespace UrbanIndo\Yii2\DynamoDb;
 
 use Aws\DynamoDb\DynamoDbClient;
 use Yii;
-use yii\base\Object;
+use yii\base\BaseObject;
 
 /**
  * @author Petra Barus <petra.barus@gmail.com>
  */
-class Command extends Object
+class Command extends BaseObject
 {
 
     /**
@@ -165,7 +165,7 @@ class Command extends Object
      */
     public function batchPutItem($table, array $values, array $options = [])
     {
-        assert(count($values <= 25));
+        //assert(count($values <= 25));
         list($name, $argument) = $this->db->getQueryBuilder()->batchPutItem($table, $values, $options);
         return $this->setCommand($name, $argument);
     }
