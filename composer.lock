@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "content-hash": "cf024a6a3f1fd236f91d5aad7290a7b9",
+    "content-hash": "539f5b2c11466f9a38c47047da2c7ef5",
     "packages": [
         {
             "name": "aws/aws-sdk-php",
-            "version": "3.37.1",
+            "version": "3.61.9",
             "source": {
                 "type": "git",
                 "url": "https://github.com/aws/aws-sdk-php.git",
-                "reference": "f3166fbdf14cea6898729dd945eaabdd211abe8f"
+                "reference": "57041356c1bb7fdcaba2e181feec56f854b52e38"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/f3166fbdf14cea6898729dd945eaabdd211abe8f",
-                "reference": "f3166fbdf14cea6898729dd945eaabdd211abe8f",
+                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/57041356c1bb7fdcaba2e181feec56f854b52e38",
+                "reference": "57041356c1bb7fdcaba2e181feec56f854b52e38",
                 "shasum": ""
             },
             "require": {
@@ -39,7 +39,7 @@
                 "ext-dom": "*",
                 "ext-openssl": "*",
                 "nette/neon": "^2.3",
-                "phpunit/phpunit": "^4.8.35|^5.4.0",
+                "phpunit/phpunit": "^4.8.35|^5.4.3",
                 "psr/cache": "^1.0"
             },
             "suggest": {
@@ -84,7 +84,7 @@
                 "s3",
                 "sdk"
             ],
-            "time": "2017-11-07T20:32:15+00:00"
+            "time": "2018-06-19T20:26:38+00:00"
         },
         {
             "name": "bower-asset/inputmask",
