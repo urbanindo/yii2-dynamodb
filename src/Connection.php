@@ -30,7 +30,7 @@ class Connection extends \yii\base\Component
      * @var DynamoDbClient
      */
     protected $_client;
-    
+
     /**
      * The query builder.
      * @var QueryBuilder
@@ -65,7 +65,7 @@ class Connection extends \yii\base\Component
     public function createCommand(array $config = [])
     {
         $command = Yii::createObject(array_merge($config, [
-            'class' => Command::className(),
+            'class' => Command::class,
             'db' => $this
         ]));
         return $command;

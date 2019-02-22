@@ -1,8 +1,14 @@
 language: php
 
 php:
-  - 7.0
-  - 7.1
+  - 7.2
+  - 7.3
+
+addons:
+    sonarcloud:
+        organization: "urbanindo"
+        token:
+            secure: "yg0wLj5oe3V3aOIyQWwPczAccmZDC+1rpkCmUFeim604Xj3GvSPcK7uSMQrhH9pPwD6svh1zCleHh04GX+kz3kKXBYWV5tIy7g8cgTmD1CFPYeVd7kdq5B7O8gKkPWfTQ8ecVSNQU134Yc6sbDYtVh2kPtZltvkmWzyVyzWimdkr3fTYOvOuiyC0+L/Ka/OpZpuPuSWSAURiMpM9V2FBsCe0rOP+NgZBcYcO3H76I662Jf2LosziruxQHNXnpyj1FNstI27KM4NNlZods17+SAhFRoF+msIi96eyAu/PI7hz+Duac6TPg5fdn7G/gZt/ciYnHjOZhF18sEX2Ot0PqDoazLmn0fG7Q6TwDJPS+A9NJn++pVJiyfEdZZX+zy/Pj6/H1+F0oS0njoEcUXQSSiBfhC1E7kkmTWZj2MEFpC+wD/Wbh9QNjrlY9woevOzmUW7/WypkphtDGz68uVzzqYmQGyZqAtYkcJkZyZoNgTzQo3R9eYZmfOcmZhhcn2F8ayasrMXOo14yOisdFwb75uWhyDUGwOro3QYeEEkI0k9j7YbceITctCjQy7z4dSSDEERxUxvf1n5o28RfArd11Jqz877c4WwtRs79MwrFeOsDOrdUr3eVkwvZTxNbHyUYNYsHQGe7xnfpyssPydQCxZ+DObKElAZrxaqj7/WjQkI="
 
 sudo: required
 
@@ -18,3 +24,4 @@ script:
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
+  - sonar-scanner

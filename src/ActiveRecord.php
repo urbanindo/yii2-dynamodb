@@ -98,7 +98,7 @@ class ActiveRecord extends BaseActiveRecord
      */
     public static function find($options = [])
     {
-        return Yii::createObject(ActiveQuery::className(), [
+        return Yii::createObject(ActiveQuery::class, [
             get_called_class(),
             $options
         ]);

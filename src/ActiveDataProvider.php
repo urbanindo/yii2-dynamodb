@@ -70,7 +70,7 @@ class ActiveDataProvider extends \yii\data\BaseDataProvider
     {
         parent::init();
         if (is_string($this->db)) {
-            $this->db = Instance::ensure($this->db, Connection::className());
+            $this->db = Instance::ensure($this->db, Connection::class);
         }
     }
 
@@ -140,7 +140,7 @@ class ActiveDataProvider extends \yii\data\BaseDataProvider
         $models = $query->all($this->db);
         if ($pagination !== false) {
             $peek = current(array_slice($models, -1));
-            
+
             if ($peek != null) {
                 /* @var $peek ActiveRecord */
                 $nextLastKey = ArrayHelper::getValue($peek->getResponseData(), 'LastEvaluatedKey');
