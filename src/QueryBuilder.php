@@ -668,12 +668,25 @@ class QueryBuilder extends BaseObject
             return $operator === 'IN' ? '0=1' : '';
         }
         $values = (array) $values;
-        if (count($column) > 1) {
+        if (is_array($column) && count($column) > 1) {
             return $this->buildCompositeInCondition($operator, $column, $values, $params);
         }
         if (is_array($column)) {
             $column = reset($column);
         }
+        return $this->buildInConditionMultiple($operator, $values, $column, $params);
+    }
+
+    /**
+     * @param string $operator
+     * @param array $values
+     * @param string $column
+     * @param mixed $params
+     * @return string
+     * @throws Exception
+     */
+    private function buildInConditionMultiple($operator, $values, $column, &$params)
+    {
         foreach ($values as $i => $value) {
             if (is_array($value)) {
                 $value = isset($value[$column]) ? $value[$column] : null;

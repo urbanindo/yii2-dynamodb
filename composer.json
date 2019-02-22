@@ -10,8 +10,8 @@
     ],
     "minimum-stability": "dev",
     "require": {
-        "php": ">=7.0",
-        "yiisoft/yii2": "^2.0.13",
+        "php": ">=7.2",
+        "yiisoft/yii2": "~2.0.15",
         "aws/aws-sdk-php": "~3.28"
     },
     "require-dev": {

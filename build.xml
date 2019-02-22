@@ -3,7 +3,11 @@
         <exec command="./test/start_server.sh"/>
     </target>
     <target name="test" depends="start-server">
-        <exec command="./vendor/bin/phpunit" passthru="true" checkreturn="true"/>
+        <exec executable="./vendor/bin/phpunit" passthru="true" checkreturn="true">
+            <arg value="--coverage-clover"/>
+            <arg value="reports/clover.xml"/>
+            <arg value="--coverage-text"/>
+        </exec>
     </target>
     <target name="phpcs">
         <exec executable="./vendor/bin/phpcs">

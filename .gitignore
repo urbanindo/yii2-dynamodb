@@ -8,3 +8,4 @@ vendor/
 # composer.lock
 /nbproject/
 .idea
+reports
